@@ -1,0 +1,91 @@
+import { NextResponse } from 'next/server'
+
+const restaurants = [
+  {
+    id: 1,
+    name: "Delhi Darbar Dhaba",
+    image: "https://images.unsplash.com/photo-1552566626-52f8b828add9?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+    rating: 4.2,
+    totalRatings: 1245,
+    cuisine: "North Indian, Mughlai, Tandoor",
+    distance: "4 km",
+    price: "₹500 for two",
+    deliveryTime: "30-40 mins",
+    isVeg: false,
+    tags: ["Fast Delivery", "Family Friendly"],
+    description: "Authentic North Indian cuisine with a modern twist. Famous for our butter chicken and naan.",
+    ratingDetails: { food: 4.5, service: 4.2, ambiance: 4.0, value: 4.3 },
+    topSelling: [
+      { name: "Butter Chicken", price: 320, orders: 1240 },
+      { name: "Garlic Naan", price: 60, orders: 980 },
+      { name: "Paneer Butter Masala", price: 280, orders: 850 },
+      { name: "Chicken Biryani", price: 300, orders: 780 },
+      { name: "Dal Makhani", price: 200, orders: 650 },
+    ],
+  },
+  {
+    id: 2,
+    name: "Burger King",
+    image: "https://images.unsplash.com/photo-1571091718767-18b5b1457add?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+    rating: 4.0,
+    totalRatings: 985,
+    cuisine: "American, Fast Food",
+    distance: "3 km",
+    price: "₹400 for two",
+    deliveryTime: "20-30 mins",
+    isVeg: false,
+    tags: ["Fast Delivery"],
+    description: "Home of the Whopper. America's favorite flame-grilled burgers.",
+    ratingDetails: { food: 4.2, service: 4.0, ambiance: 3.8, value: 4.1 },
+    topSelling: [
+      { name: "Whopper Burger", price: 199, orders: 1560 },
+      { name: "Chicken Fries", price: 149, orders: 1120 },
+      { name: "Veg Whopper", price: 179, orders: 890 },
+    ],
+  },
+  {
+    id: 3,
+    name: "Pizza Hut",
+    image: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+    rating: 4.3,
+    totalRatings: 1560,
+    cuisine: "Italian, Pizza",
+    distance: "2.5 km",
+    price: "₹600 for two",
+    deliveryTime: "25-35 mins",
+    isVeg: false,
+    tags: ["Family Friendly"],
+    description: "World's largest pizza chain with delicious pan pizzas and pasta.",
+    ratingDetails: { food: 4.4, service: 4.2, ambiance: 4.1, value: 4.3 },
+    topSelling: [
+      { name: "Margherita Pizza", price: 299, orders: 1420 },
+      { name: "Pepperoni Pizza", price: 349, orders: 1180 },
+      { name: "Garlic Breadsticks", price: 149, orders: 960 },
+    ],
+  },
+  {
+    id: 4,
+    name: "Haldiram's",
+    image: "https://images.unsplash.com/photo-1565299585323-38d6b0865b47?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+    rating: 4.4,
+    totalRatings: 1320,
+    cuisine: "North Indian, Sweets, Snacks",
+    distance: "2 km",
+    price: "₹400 for two",
+    deliveryTime: "20-30 mins",
+    isVeg: true,
+    tags: ["Pure Veg", "Family Friendly", "Sweets"],
+    description: "Famous for Indian sweets, snacks and traditional vegetarian food.",
+    ratingDetails: { food: 4.6, service: 4.3, ambiance: 4.2, value: 4.5 },
+    topSelling: [
+      { name: "Raj Kachori", price: 180, orders: 980 },
+      { name: "Chole Bhature", price: 220, orders: 850 },
+      { name: "Paneer Tikka", price: 280, orders: 720 },
+    ],
+  },
+]
+
+export async function GET() {
+  return NextResponse.json(restaurants)
+}
+
