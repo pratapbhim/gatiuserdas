@@ -7,7 +7,17 @@ import { useState } from 'react'
 
 export default function CartPage() {
   const router = useRouter()
-  const { items, total, removeFromCart, updateItemQuantity, restaurantName, clearCartItems, updateItemOptions } = useCart()
+  const { 
+    items, 
+    total, 
+    removeFromCart, 
+    updateItemQuantity, 
+    restaurantName, 
+    clearCartItems, 
+    updateItemOptions,
+    getItemsGroupedByRestaurant,
+    lastActiveRestaurantId 
+  } = useCart()
   const [customOpen, setCustomOpen] = useState(false)
   const [customCartEntry, setCustomCartEntry] = useState<any | null>(null)
 
@@ -68,66 +78,111 @@ export default function CartPage() {
             Back
           </button>
           <h1 className="text-3xl font-bold text-gray-900">Your Cart</h1>
-          <p className="text-gray-600 text-sm">{restaurantName}</p>
+          <p className="text-gray-600 text-sm">
+            {getItemsGroupedByRestaurant().length > 1 
+              ? `${getItemsGroupedByRestaurant().length} restaurants` 
+              : restaurantName}
+          </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Cart Items */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-              <div className="divide-y">
-                {items.map((item) => (
-                  <div key={item.id} className="p-4 hover:bg-gray-50 transition-colors">
-                    <div className="flex gap-4">
-                      <div className="w-20 h-20 rounded-lg bg-gray-200 flex-shrink-0 overflow-hidden flex items-center justify-center">
-                        <i className="fas fa-shopping-bag text-gray-400 text-2xl"></i>
+          {/* Cart Items - Grouped by Restaurant */}
+          <div className="lg:col-span-2 space-y-6">
+            {getItemsGroupedByRestaurant().map((group, groupIndex) => (
+              <div 
+                key={group.restaurantId} 
+                className={`bg-white rounded-2xl shadow-lg overflow-hidden ${
+                  group.restaurantId === lastActiveRestaurantId 
+                    ? 'ring-2 ring-[#FF6B35] ring-offset-2' 
+                    : ''
+                }`}
+              >
+                {/* Restaurant Header */}
+                <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-4 py-3 border-b border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#FF6B35] to-orange-500 flex items-center justify-center">
+                        <i className="fas fa-store text-white"></i>
                       </div>
-                      <div className="flex-1">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <h3 className="font-bold text-gray-900">{item.name}</h3>
-                            {item.size && <p className="text-sm text-gray-600">Size: {item.size.name}</p>}
-                            {item.addons && item.addons.length > 0 && (
-                              <p className="text-sm text-gray-600">Add-ons: {item.addons.map(a => a.name).join(', ')}</p>
-                            )}
-                            <p className="text-sm text-gray-600">Unit: ₹{item.price}</p>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <button
-                              onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
-                              className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center font-bold text-gray-700"
-                            >
-                              −
-                            </button>
-                            <span className="w-6 text-center font-bold text-gray-900">{item.quantity}</span>
-                            <button
-                              onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
-                              className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center font-bold text-gray-700"
-                            >
-                              +
-                            </button>
-                            <button
-                              onClick={() => removeFromCart(item.id)}
-                              className="ml-4 text-gray-400 hover:text-red-500 transition-colors"
-                            >
-                              <i className="fas fa-trash text-sm"></i>
-                            </button>
-                            {optionsMap[item.productId] && (
+                      <div>
+                        <h3 className="font-bold text-gray-900">{group.restaurantName}</h3>
+                        <p className="text-xs text-gray-500">{group.items.length} item{group.items.length > 1 ? 's' : ''}</p>
+                      </div>
+                    </div>
+                    {group.restaurantId === lastActiveRestaurantId && (
+                      <span className="text-xs font-semibold text-[#FF6B35] bg-orange-50 px-2 py-1 rounded-full">
+                        Most Recent
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Items */}
+                <div className="divide-y">
+                  {group.items.map((item) => (
+                    <div key={item.id} className="p-4 hover:bg-gray-50 transition-colors">
+                      <div className="flex gap-4">
+                        {/* Product Image */}
+                        <div className="w-20 h-20 rounded-lg bg-gray-100 flex-shrink-0 overflow-hidden">
+                          {item.image ? (
+                            <img 
+                              src={item.image} 
+                              alt={item.name} 
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <i className="fas fa-utensils text-gray-400 text-xl"></i>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <h3 className="font-bold text-gray-900">{item.name}</h3>
+                              {item.size && <p className="text-sm text-gray-600">Size: {item.size.name}</p>}
+                              {item.addons && item.addons.length > 0 && (
+                                <p className="text-sm text-gray-600">Add-ons: {item.addons.map(a => a.name).join(', ')}</p>
+                              )}
+                              <p className="text-sm text-gray-600">Unit: ₹{item.price}</p>
+                            </div>
+                            <div className="flex items-center gap-3">
                               <button
-                                onClick={() => { setCustomCartEntry(item); setCustomOpen(true) }}
-                                className="ml-3 px-3 py-1 text-sm border border-gray-200 rounded-lg hover:bg-gray-50"
+                                onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
+                                className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center font-bold text-gray-700"
                               >
-                                Customize
+                                −
                               </button>
-                            )}
+                              <span className="w-6 text-center font-bold text-gray-900">{item.quantity}</span>
+                              <button
+                                onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
+                                className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center font-bold text-gray-700"
+                              >
+                                +
+                              </button>
+                              <button
+                                onClick={() => removeFromCart(item.id)}
+                                className="ml-4 text-gray-400 hover:text-red-500 transition-colors"
+                              >
+                                <i className="fas fa-trash text-sm"></i>
+                              </button>
+                              {optionsMap[item.productId] && (
+                                <button
+                                  onClick={() => { setCustomCartEntry(item); setCustomOpen(true) }}
+                                  className="ml-3 px-3 py-1 text-sm border border-gray-200 rounded-lg hover:bg-gray-50"
+                                >
+                                  Customize
+                                </button>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
+            ))}
           </div>
 
           {/* Order Summary */}

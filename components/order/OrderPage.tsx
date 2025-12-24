@@ -3,7 +3,6 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { useCart } from '@/lib/hooks/useCart'
-import OrderHeader from './OrderHeader'
 import CategoriesSection from './CategoriesSection'
 import RestaurantsSection from './RestaurantsSection'
 import RestaurantDetailPage from './RestaurantDetailPage'
@@ -36,6 +35,7 @@ export default function OrderPage() {
       quantity: 1,
       restaurantId: selectedRestaurantId?.toString(),
       restaurantName: item.restaurantName,
+      image: item.image, // Include product image
     })
   }
 
@@ -50,7 +50,6 @@ export default function OrderPage() {
   if (selectedRestaurantId) {
     return (
       <>
-        <OrderHeader cartCount={cartCount} onCartClick={() => router.push('/cart')} />
         <RestaurantDetailPage 
           restaurantId={selectedRestaurantId}
           onBack={() => setSelectedRestaurantId(null)}
@@ -63,7 +62,6 @@ export default function OrderPage() {
 
   return (
     <>
-      <OrderHeader cartCount={cartCount} onCartClick={() => router.push('/cart')} />
       {currentView === 'categories' ? (
         <CategoriesSection 
           onViewRestaurants={() => setCurrentView('restaurants')} 

@@ -5,7 +5,7 @@ import { loadFromLocalStorage } from '@/lib/slices/cartSlice'
 
 export const useCart = () => {
   const dispatch = useAppDispatch()
-  const { items, total, restaurantId, restaurantName } = useAppSelector(state => state.cart)
+  const { items, total, restaurantId, restaurantName, lastActiveRestaurantId, restaurantOrder } = useAppSelector(state => state.cart)
 
   // Initialize cart from localStorage on mount
   useEffect(() => {
@@ -28,6 +28,7 @@ export const useCart = () => {
         quantity: item.quantity || 1,
         restaurantId: item.restaurantId,
         restaurantName: item.restaurantName,
+        image: item.image, // Include product image
       }))
       return
     }
@@ -51,7 +52,63 @@ export const useCart = () => {
       addons: addons,
       restaurantId: item.restaurantId,
       restaurantName: item.restaurantName,
+      image: item.image, // Include product image
     }))
+  }
+
+  // Check if adding item from a different restaurant (for confirmation popup)
+  const isFromDifferentRestaurant = (newRestaurantId: string) => {
+    if (!newRestaurantId) return false
+    if (items.length === 0) return false
+    // Check if any item exists from a different restaurant
+    const existingRestaurantIds = new Set(items.map(i => i.restaurantId).filter(Boolean))
+    return existingRestaurantIds.size > 0 && !existingRestaurantIds.has(newRestaurantId)
+  }
+
+  // Get list of unique restaurant IDs currently in cart
+  const getRestaurantIdsInCart = () => {
+    return [...new Set(items.map(i => i.restaurantId).filter(Boolean))] as string[]
+  }
+
+  // Get items grouped by restaurant (ordered by restaurantOrder - most recent first)
+  const getItemsGroupedByRestaurant = () => {
+    const groups: Record<string, typeof items> = {}
+    
+    items.forEach(item => {
+      const restId = item.restaurantId || 'unknown'
+      if (!groups[restId]) {
+        groups[restId] = []
+      }
+      groups[restId].push(item)
+    })
+
+    // Sort groups by restaurantOrder (most recent first)
+    const sortedGroups: Array<{ restaurantId: string; restaurantName: string; items: typeof items }> = []
+    
+    // First add restaurants in order (handle undefined restaurantOrder)
+    const orderList = restaurantOrder || []
+    orderList.forEach(restId => {
+      if (groups[restId]) {
+        const restItems = groups[restId]
+        sortedGroups.push({
+          restaurantId: restId,
+          restaurantName: restItems[0]?.restaurantName || 'Restaurant',
+          items: restItems
+        })
+        delete groups[restId]
+      }
+    })
+    
+    // Add any remaining (shouldn't happen but fallback)
+    Object.entries(groups).forEach(([restId, restItems]) => {
+      sortedGroups.push({
+        restaurantId: restId,
+        restaurantName: restItems[0]?.restaurantName || 'Restaurant',
+        items: restItems
+      })
+    })
+
+    return sortedGroups
   }
 
   const removeFromCart = (itemId: string) => {
@@ -140,6 +197,8 @@ export const useCart = () => {
     total,
     restaurantId,
     restaurantName,
+    lastActiveRestaurantId,
+    restaurantOrder,
     cartCount: items.reduce((sum, item) => sum + item.quantity, 0),
     addToCart,
     removeFromCart,
@@ -148,5 +207,8 @@ export const useCart = () => {
     updateItemOptions,
     clearCartItems,
     getCartQuantity,
+    isFromDifferentRestaurant,
+    getRestaurantIdsInCart,
+    getItemsGroupedByRestaurant,
   }
 }

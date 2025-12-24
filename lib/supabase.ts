@@ -1,32 +1,52 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js'
+// Lazy-load Supabase to avoid bundling vendor chunks at module-eval time.
+// This prevents build/runtime errors when Supabase isn't available during dev/build.
+let _client: any = null
+let _initialized = false
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+export const isSupabaseConfigured = Boolean(
+  process.env.NEXT_PUBLIC_SUPABASE_URL &&
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
+  !String(process.env.NEXT_PUBLIC_SUPABASE_URL).includes('placeholder')
+)
 
-// Check if Supabase is properly configured
-const isSupabaseConfigured = supabaseUrl && supabaseAnonKey && 
-  supabaseUrl !== '' && 
-  supabaseAnonKey !== '' &&
-  !supabaseUrl.includes('placeholder')
-
-// Create Supabase client with fallback for development
-let supabase: SupabaseClient
-
-if (isSupabaseConfigured) {
-  supabase = createClient(supabaseUrl, supabaseAnonKey)
-} else {
-  // Use placeholder values that won't cause runtime errors
-  // This allows the app to run without Supabase configured
-  console.warn('⚠️ Supabase credentials not found. Authentication features will not work.')
-  console.warn('Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local')
-  console.warn('See SETUP.md for instructions.')
-  
-  // Create a client with placeholder values to prevent runtime errors
-  supabase = createClient(
-    'https://placeholder.supabase.co',
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsYWNlaG9sZGVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE2NDUxOTIwMDAsImV4cCI6MTk2MDc2ODAwMH0.placeholder'
-  )
+export async function initSupabase() {
+  if (_initialized) return _client
+  try {
+    const mod = await import('@supabase/supabase-js')
+    const { createClient } = mod
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+    _client = createClient(supabaseUrl || 'https://placeholder.supabase.co', supabaseAnonKey || 'placeholder')
+    _initialized = true
+    return _client
+  } catch (err) {
+    console.warn('Supabase dynamic import failed:', err)
+    // Provide a minimal stub to avoid runtime crashes in non-auth flows
+    _client = {
+      auth: { signIn: async () => ({ data: null, error: null }) },
+      from: () => ({ select: async () => ({ data: null, error: null }) }),
+    }
+    _initialized = true
+    return _client
+  }
 }
 
-export { supabase, isSupabaseConfigured }
+// Export a proxy so existing import sites (which expect a `supabase` object) continue to work.
+export const supabase: any = new Proxy({}, {
+  get(_, prop) {
+    return (...args: any[]) => {
+      if (_initialized && _client && typeof (_client as any)[prop] === 'function') {
+        return (_client as any)[prop](...args)
+      }
+      // If not initialized yet, initialize in background and return a safe promise.
+      return initSupabase().then((client) => {
+        const fn = (client as any)[prop]
+        if (typeof fn === 'function') return fn(...args)
+        return (client as any)[prop]
+      }).catch(() => ({ data: null, error: null }))
+    }
+  }
+})
+
+export default supabase
 
