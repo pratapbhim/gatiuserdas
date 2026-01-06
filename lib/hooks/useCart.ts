@@ -67,7 +67,7 @@ export const useCart = () => {
 
   // Get list of unique restaurant IDs currently in cart
   const getRestaurantIdsInCart = () => {
-    return [...new Set(items.map(i => i.restaurantId).filter(Boolean))] as string[]
+    return Array.from(new Set(items.map(i => i.restaurantId).filter(Boolean))) as string[]
   }
 
   // Get items grouped by restaurant (ordered by restaurantOrder - most recent first)
@@ -183,8 +183,18 @@ export const useCart = () => {
     }))
   }
 
-  const clearCartItems = () => {
-    dispatch(clearCart())
+  const clearCartItems = (restaurantIds?: string[]) => {
+    if (restaurantIds && restaurantIds.length > 0) {
+      // Clear only items from specific restaurants
+      items.forEach(item => {
+        if (restaurantIds.includes(item.restaurantId || '')) {
+          dispatch(removeItem(item.id))
+        }
+      })
+    } else {
+      // Clear all items
+      dispatch(clearCart())
+    }
   }
 
   const getCartQuantity = (itemId: string) => {

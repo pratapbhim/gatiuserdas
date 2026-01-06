@@ -1,10 +1,66 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { useAppSelector, useAppDispatch } from '@/lib/hooks'
+import ServiceSwitchModal from '@/components/auth/ServiceSwitchModal'
+import { ServiceCategory, setCurrentService } from '@/lib/slices/authSlice'
 
 export default function QuickCategories() {
+  const router = useRouter()
+  const dispatch = useAppDispatch()
+  const { user, isAuthenticated, currentService } = useAppSelector(state => state.auth)
   const [showVoucherPopup, setShowVoucherPopup] = useState(false)
+  
+  // Service switch modal states
+  const [showSwitchModal, setShowSwitchModal] = useState(false)
+  const [targetService, setTargetService] = useState<ServiceCategory>('food')
+  const [pendingNavigation, setPendingNavigation] = useState<string | null>(null)
+
+  // Map paths to services (correct mapping)
+  // /order page = food service
+  // /ride page = person service (ride booking)
+  // /courier page = parcel service (courier/parcel delivery)
+  const pathToService: Record<string, ServiceCategory> = {
+    '/order': 'food',
+    '/ride': 'person',    // RidePage uses 'person' service
+    '/courier': 'parcel', // CourierPage uses 'parcel' service
+  }
+
+  // Handle navigation with service switch check
+  const handleServiceNavigation = (path: string, targetServiceOverride?: ServiceCategory) => {
+    const service = targetServiceOverride || pathToService[path]
+    if (!service) {
+      router.push(path)
+      return
+    }
+
+    if (!isAuthenticated || !user) {
+      // Not authenticated, just navigate (service check will happen on destination page)
+      router.push(path)
+      return
+    }
+
+    // All users have access to all 3 services
+    if (service === currentService) {
+      router.push(path)
+    } else {
+      // Show switch modal with correct target service
+      setTargetService(service)
+      setPendingNavigation(path)
+      setShowSwitchModal(true)
+    }
+  }
+
+  // Handle successful switch
+  const handleSwitchComplete = () => {
+    setShowSwitchModal(false)
+    if (pendingNavigation) {
+      router.push(pendingNavigation)
+      setPendingNavigation(null)
+    }
+  }
 
   const categories = [
     {
@@ -12,18 +68,21 @@ export default function QuickCategories() {
       title: 'Order Your Meal',
       image: 'https://cdn-icons-png.flaticon.com/512/706/706164.png',
       href: '/order',
+      service: 'food' as ServiceCategory,
     },
     {
-      tag: 'Powered by GatiMitra',
-      title: 'Book Your Ride',
+      tag: 'Book a Ride',
+      title: 'Request a Ride',
       image: 'https://cdn-icons-png.flaticon.com/512/854/854878.png',
       href: '/ride',
+      service: 'person' as ServiceCategory, // RidePage uses 'person' category
     },
     {
-      tag: 'Send & Receive',
-      title: 'Book Your Parcel',
+      tag: 'Courier Service',
+      title: 'Send Parcels',
       image: 'https://cdn-icons-png.flaticon.com/512/679/679922.png',
-      href: '/courier',
+      href: '/courier#parcel-form',
+      service: 'parcel' as ServiceCategory, // CourierPage uses 'parcel' category
     },
     {
       tag: 'Deals & Offers',
@@ -113,6 +172,19 @@ export default function QuickCategories() {
               )
             }
 
+            // For service-based categories, use click handler for service switching
+            if (category.service) {
+              return (
+                <div 
+                  key={index} 
+                  onClick={() => handleServiceNavigation(category.href, category.service)}
+                  className="cursor-pointer"
+                >
+                  {cardContent}
+                </div>
+              )
+            }
+
             return (
               <Link key={index} href={category.href || '/'}>
                 {cardContent}
@@ -145,6 +217,14 @@ export default function QuickCategories() {
           </div>
         </div>
       )}
+      
+      {/* Service Switch Modal */}
+      <ServiceSwitchModal
+        isOpen={showSwitchModal}
+        onClose={() => { setShowSwitchModal(false); setPendingNavigation(null); }}
+        targetService={targetService}
+        onContinue={handleSwitchComplete}
+      />
     </>
   )
 }

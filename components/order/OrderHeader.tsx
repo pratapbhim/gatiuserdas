@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useAppSelector } from '@/lib/hooks'
+import { useAppSelector, useAppDispatch } from '@/lib/hooks'
+import { logout } from '@/lib/slices/authSlice'
 import Search from '@/components/common/Search'
 import AuthModal from '@/components/auth/AuthModal'
 
@@ -14,12 +15,39 @@ interface OrderHeaderProps {
 
 export default function OrderHeader({ cartCount = 0, onCartClick }: OrderHeaderProps) {
   const router = useRouter()
+  const dispatch = useAppDispatch()
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
   const [showLocationModal, setShowLocationModal] = useState(false)
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false)
   const [currentLocation, setCurrentLocation] = useState('Detecting location...')
   const [isDetecting, setIsDetecting] = useState(true)
-  const { user, isAuthenticated } = useAppSelector(state => state.auth)
+  const { user, isAuthenticated, currentService } = useAppSelector(state => state.auth)
+  const profileDropdownRef = useRef<HTMLDivElement>(null)
+
+  // Auto-detect location on mount
+  useEffect(() => {
+    detectLocation()
+  }, [])
+
+  // Close profile dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target as Node)) {
+        setShowProfileDropdown(false)
+      }
+    }
+    if (showProfileDropdown) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showProfileDropdown])
+
+  const handleLogout = () => {
+    dispatch(logout())
+    setShowProfileDropdown(false)
+    router.push('/')
+  }
 
   // Auto-detect location on mount
   useEffect(() => {
@@ -60,13 +88,9 @@ export default function OrderHeader({ cartCount = 0, onCartClick }: OrderHeaderP
           <div className="max-w-7xl mx-auto">
             <div className="flex justify-between items-center gap-2 md:gap-2">
               {/* Logo Section - Matching Landing Page */}
-              <Link href="/" className="flex items-center gap-1 md:gap-1.5 shrink-0 group">
-                {/* Logo Icon */}
-                <div className="relative flex-shrink-0 transition-transform duration-300 group-hover:scale-110">
-                  <div className="h-6 md:h-7 w-6 md:w-7 bg-gradient-to-br from-[#16c2a5] to-[#0fa589] rounded-lg flex items-center justify-center text-white font-bold text-xs md:text-sm shadow-md">
-                    G
-                  </div>
-                </div>
+              <Link href="/" className="flex items-center gap-2 md:gap-2.5 shrink-0 group">
+                {/* Logo Image */}
+                <img src="/img/logo.png" alt="GatiMitra Logo" className="w-8 md:w-10 h-8 md:h-10 flex-shrink-0" />
                 {/* Logo Text */}
                 <div className="flex flex-col gap-0">
                   <div className="flex items-center gap-0 leading-none">
@@ -122,15 +146,74 @@ export default function OrderHeader({ cartCount = 0, onCartClick }: OrderHeaderP
                   </div>
                 </button>
 
-                {/* User/Auth */}
+                {/* User/Auth with Dropdown */}
                 {isAuthenticated && user ? (
-                  <div className="hidden sm:block bg-gradient-to-r from-[#ff6b35] to-[#ff8451] text-white px-2 py-1 rounded-full font-semibold text-[10px] transition-all hover:shadow-lg hover:-translate-y-0.5 truncate max-w-[80px]">
-                    👤 {user.name ? user.name.split(' ')[0] : user.phone}
+                  <div className="relative" ref={profileDropdownRef}>
+                    <button
+                      onClick={() => setShowProfileDropdown(!showProfileDropdown)}
+                      className="hidden sm:flex items-center gap-1.5 bg-gradient-to-r from-[#ff6b35] to-[#ff8451] text-white px-2.5 py-1.5 rounded-full font-semibold text-[10px] transition-all hover:shadow-lg hover:-translate-y-0.5"
+                    >
+                      <i className="fas fa-user"></i>
+                      <span className="truncate max-w-[60px]">{user.name ? user.name.split(' ')[0] : user.phone}</span>
+                      <i className={`fas fa-chevron-down text-[8px] transition-transform ${showProfileDropdown ? 'rotate-180' : ''}`}></i>
+                    </button>
+                    
+                    {/* Profile Dropdown */}
+                    {showProfileDropdown && (
+                      <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
+                        {/* User Info Header */}
+                        <div className="bg-gradient-to-r from-[#ff6b35] to-[#ff8451] px-4 py-3 text-white">
+                          <p className="font-bold text-sm">{user.name || 'User'}</p>
+                          <p className="text-xs text-white/80">{user.phone}</p>
+                        </div>
+                        
+                        {/* Active Service */}
+                        <div className="px-4 py-3 border-b border-gray-100">
+                          <p className="text-[10px] text-gray-500 uppercase font-semibold mb-1.5">Active Service</p>
+                          <div className="flex items-center gap-2 bg-orange-50 px-3 py-2 rounded-lg">
+                            <div className="w-8 h-8 rounded-lg bg-orange-500 flex items-center justify-center">
+                              <i className="fas fa-utensils text-white text-xs"></i>
+                            </div>
+                            <div>
+                              <p className="font-semibold text-gray-900 text-sm">Food Delivery</p>
+                              <p className="text-[10px] text-green-600 font-medium">● Active</p>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Menu Items */}
+                        <div className="py-2">
+                          <button
+                            onClick={() => {
+                              setShowProfileDropdown(false)
+                              router.push('/orders?filter=food&from=%2Forder')
+                            }}
+                            className="w-full flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 transition-colors text-left"
+                          >
+                            <i className="fas fa-shopping-bag text-[#ff6b35] w-4"></i>
+                            <span className="font-medium text-sm">My Orders</span>
+                          </button>
+                          
+                          <button
+                            onClick={handleLogout}
+                            className="w-full flex items-center gap-3 px-4 py-2.5 text-red-600 hover:bg-red-50 transition-colors text-left"
+                          >
+                            <i className="fas fa-sign-out-alt w-4"></i>
+                            <span className="font-medium text-sm">Logout</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <button
-                    onClick={() => setIsAuthModalOpen(true)}
-                    className="hidden sm:block bg-gradient-to-r from-[#ff6b35] to-[#ff8451] text-white px-2 py-1 rounded-full font-semibold text-[10px] transition-all hover:shadow-lg hover:-translate-y-0.5"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      setIsAuthModalOpen(true)
+                    }}
+                    className="hidden sm:block bg-gradient-to-r from-[#ff6b35] to-[#ff8451] text-white px-2 py-1 rounded-full font-semibold text-[10px] transition-all hover:shadow-lg hover:-translate-y-0.5 z-50"
+                    type="button"
                   >
                     Sign In
                   </button>
@@ -189,11 +272,14 @@ export default function OrderHeader({ cartCount = 0, onCartClick }: OrderHeaderP
                   </button>
                   {!isAuthenticated && (
                     <button
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
                         setIsAuthModalOpen(true)
                         setShowMenu(false)
                       }}
                       className="w-full bg-gradient-to-r from-[#ff6b35] to-[#ff8451] text-white px-2.5 py-1.5 rounded-full font-semibold text-[10px] transition-all hover:shadow-lg"
+                      type="button"
                     >
                       Sign In
                     </button>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, createContext } from 'react'
 
 interface FlyingItem {
   id: string
@@ -16,7 +16,7 @@ interface CartAnimationContextType {
   addFlyingAnimation: (item: FlyingItem) => void
 }
 
-export const CartAnimationContext = require('react').createContext<CartAnimationContextType | null>(null)
+export const CartAnimationContext = createContext<CartAnimationContextType | null>(null)
 
 export function CartAnimationProvider({ children }: { children: React.ReactNode }) {
   const [flyingItems, setFlyingItems] = useState<FlyingItem[]>([])

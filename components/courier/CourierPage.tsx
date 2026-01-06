@@ -1,29 +1,93 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useAppSelector } from '@/lib/hooks'
+import { useRouter } from 'next/navigation'
+import { useAppSelector, useAppDispatch } from '@/lib/hooks'
 import AuthModal from '@/components/auth/AuthModal'
+import ServiceSwitchModal from '@/components/auth/ServiceSwitchModal'
 import Footer from '@/components/layout/Footer'
+import { ServiceCategory, setCurrentService, getUserCategories, updateUserCategories } from '@/lib/slices/authSlice'
 
 export default function CourierPage() {
+  const router = useRouter()
+  const dispatch = useAppDispatch()
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
-  const { user, isAuthenticated } = useAppSelector(state => state.auth)
+  const { user, isAuthenticated, currentService } = useAppSelector(state => state.auth)
   const [pickup, setPickup] = useState('')
   const [dropoff, setDropoff] = useState('')
+  
+  // Service switch modal states
+  const [showSwitchModal, setShowSwitchModal] = useState(false)
+  const [targetService, setTargetService] = useState<ServiceCategory>('parcel')
+  const [pendingNavigation, setPendingNavigation] = useState<string | null>(null)
+  const [hasCheckedService, setHasCheckedService] = useState(false)
+
+  // Set current service to 'parcel' when on courier page
+  useEffect(() => {
+    if (isAuthenticated && user && !hasCheckedService) {
+      // All users have access to all 3 services
+      // Just show switch modal if coming from different service
+      if (currentService !== 'parcel') {
+        setTargetService('parcel')
+        setShowSwitchModal(true)
+      } else {
+        dispatch(setCurrentService('parcel'))
+      }
+      setHasCheckedService(true)
+    }
+  }, [isAuthenticated, user, dispatch, currentService, hasCheckedService])
+
+  // Handle navigation with service switch check
+  const handleNavigation = async (path: string, service: ServiceCategory) => {
+    if (!isAuthenticated || !user) {
+      router.push(path)
+      return
+    }
+
+    // All users have access to all 3 services
+    if (service === currentService) {
+      // Same service, navigate directly
+      router.push(path)
+    } else {
+      // Different service - show switch modal
+      setTargetService(service)
+      setPendingNavigation(path)
+      setShowSwitchModal(true)
+    }
+  }
+
+  // Handle successful switch
+  const handleSwitchComplete = () => {
+    setShowSwitchModal(false)
+    if (pendingNavigation) {
+      router.push(pendingNavigation)
+      setPendingNavigation(null)
+    }
+  }
 
   return (
     <>
       <header className="bg-white shadow-md sticky top-0 z-[1000] py-4 px-[5%]">
         <div className="max-w-[1200px] mx-auto flex justify-between items-center flex-wrap gap-5">
-          <Link href="/" className="text-3xl font-extrabold text-[#FF6B6B] flex items-center gap-2">
-            <i className="fas fa-bolt text-[#4ECDC4]"></i>
+          <Link href="/" className="text-3xl font-extrabold text-[#FF6B6B] flex items-center gap-3">
+            <img src="/img/logo.png" alt="GatiMitra Logo" className="w-10 h-10 object-contain" />
             GatiMitra
           </Link>
           <nav className="flex gap-8">
-            <Link href="/courier" className="text-[#FF6B6B] font-medium border-b-2 border-[#FF6B6B] pb-1">Courier</Link>
-            <Link href="/ride" className="text-[#1A1A2E] font-medium transition-colors hover:text-[#FF6B6B]">Ride</Link>
-            <Link href="/order" className="text-[#1A1A2E] font-medium transition-colors hover:text-[#FF6B6B]">Food</Link>
+            <span className="text-[#FF6B6B] font-medium border-b-2 border-[#FF6B6B] pb-1 cursor-default">Courier</span>
+            <button 
+              onClick={() => handleNavigation('/ride', 'person')}
+              className="text-[#1A1A2E] font-medium transition-colors hover:text-[#FF6B6B] bg-transparent border-none cursor-pointer"
+            >
+              Ride
+            </button>
+            <button 
+              onClick={() => handleNavigation('/order', 'food')}
+              className="text-[#1A1A2E] font-medium transition-colors hover:text-[#FF6B6B] bg-transparent border-none cursor-pointer"
+            >
+              Food
+            </button>
           </nav>
           {isAuthenticated && user ? (
             <div className="text-[#FF6B6B] font-semibold">{user.name || user.phone}</div>
@@ -126,6 +190,15 @@ export default function CourierPage() {
       </section>
 
       <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
+      
+      {/* Service Switch Modal */}
+      <ServiceSwitchModal
+        isOpen={showSwitchModal}
+        onClose={() => { setShowSwitchModal(false); setPendingNavigation(null); }}
+        targetService={targetService}
+        onContinue={handleSwitchComplete}
+      />
+      
       <Footer />
     </>
   )

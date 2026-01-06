@@ -3,7 +3,7 @@
 interface RestaurantSwitchModalProps {
   isOpen: boolean
   onClose: () => void
-  onConfirm: () => void
+  onConfirm: (keepBoth: boolean) => void
   currentRestaurantName: string
   newRestaurantName: string
 }
@@ -39,31 +39,39 @@ export default function RestaurantSwitchModal({
             You already have items from <span className="font-semibold text-gray-900">{currentRestaurantName}</span> in your cart.
           </p>
           <p className="text-gray-600 mb-6">
-            Adding items from <span className="font-semibold text-gray-900">{newRestaurantName}</span> will create a separate order group in your cart.
+            What would you like to do?
           </p>
 
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
             <div className="flex items-start gap-3">
               <i className="fas fa-info-circle text-blue-500 mt-0.5"></i>
               <p className="text-sm text-blue-800">
-                You can order from multiple restaurants! Each restaurant's items will be shown in a separate section in your cart.
+                You can order from multiple restaurants! Each restaurant&apos;s items will be shown in a separate section in your cart.
               </p>
             </div>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex gap-3">
+          <div className="space-y-3">
             <button
-              onClick={onClose}
-              className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition-all"
+              onClick={() => onConfirm(true)}
+              className="w-full px-4 py-3 bg-gradient-to-r from-[#FF6B35] to-orange-500 text-white font-semibold rounded-xl hover:shadow-lg transition-all flex items-center justify-center gap-2"
             >
-              Cancel
+              <i className="fas fa-plus"></i>
+              Keep Both & Add to Cart
             </button>
             <button
-              onClick={onConfirm}
-              className="flex-1 px-4 py-3 bg-gradient-to-r from-[#FF6B35] to-orange-500 text-white font-semibold rounded-xl hover:shadow-lg transition-all"
+              onClick={() => onConfirm(false)}
+              className="w-full px-4 py-3 border-2 border-red-300 text-red-600 font-semibold rounded-xl hover:bg-red-50 transition-all flex items-center justify-center gap-2"
             >
-              Yes, Add Items
+              <i className="fas fa-exchange-alt"></i>
+              Replace Cart with New Items
+            </button>
+            <button
+              onClick={onClose}
+              className="w-full px-4 py-3 border border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition-all"
+            >
+              Cancel
             </button>
           </div>
         </div>

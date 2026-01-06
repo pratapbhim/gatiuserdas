@@ -1,6 +1,239 @@
-'use client'
+"use client";
+
+// BannerCarousel component for infinite image loop
+import { useState as useReactState, useEffect as useReactEffect } from 'react';
+function BannerCarousel({ images, fallback, alt, restaurant, getIsOpen }) {
+  const [idx, setIdx] = useReactState(0);
+  const [isPaused, setIsPaused] = useReactState(false);
+  // Strict sequence: banner, 5 top-rated menu items, banner, ...
+  const topImages = (images || [])
+    .filter(img => !!img.src)
+    .slice(0, 5)
+    .map(img => ({ ...img, type: 'item' }));
+  const allImages = [
+    { src: fallback, alt, type: 'banner' },
+    ...topImages,
+  ];
+  // Preload all images
+  allImages.forEach(img => {
+    if (typeof window !== 'undefined') {
+      const preload = new window.Image();
+      preload.src = img.src;
+    }
+  });
+  // Infinite loop logic, 4s per slide, smooth
+  useReactEffect(() => {
+    if (isPaused || allImages.length < 2) return;
+    const interval = setInterval(() => {
+      setIdx(i => (i + 1) % allImages.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [allImages.length, isPaused]);
+
+  // For sliding animation: always render current and previous
+  const getSlide = (i) => {
+    if (i < 0) return allImages.length - 1;
+    if (i >= allImages.length) return 0;
+    return i;
+  };
+  const prevIdx = getSlide(idx - 1);
+  const currIdx = idx;
+
+  // Helper: decide object-fit and background for each image type
+  const getImageProps = (img) => {
+    if (img.type === 'banner') {
+      return {
+        className: 'object-cover',
+        style: { objectFit: 'cover', background: 'none' },
+      };
+    } else {
+      return {
+        className: 'object-contain',
+        style: { objectFit: 'contain', background: 'none', zIndex: 2 },
+      };
+    }
+  };
+
+  return (
+    <div
+      className="relative h-56 md:h-72 w-full bg-white overflow-hidden"
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+    >
+      {/* Blurred background for item slides */}
+      {allImages[currIdx].type === 'item' && (
+        <div className="absolute inset-0 w-full h-full z-0">
+          <Image
+            src={allImages[currIdx].src}
+            alt={allImages[currIdx].alt}
+            fill
+            priority
+            style={{ objectFit: 'cover', filter: 'blur(18px) brightness(0.7)' }}
+          />
+          <div className="absolute inset-0 bg-black/40" />
+        </div>
+      )}
+          {/* Always show overlay on top of all slides (including banner) */}
+          {typeof restaurant !== 'undefined' && restaurant && (
+            <div className="absolute inset-0 flex flex-col justify-end pointer-events-none z-20">
+              <div className="w-full px-5 md:px-8 pb-5 md:pb-8 pt-8 bg-gradient-to-t from-black/90 via-black/60 to-transparent rounded-2xl">
+                <div className="max-w-3xl">
+                  <h1 className="text-2xl md:text-3xl font-black mb-2 drop-shadow-2xl tracking-tight text-white">
+                    {restaurant.restaurant_name}
+                  </h1>
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                    {restaurant.cuisine_type && (
+                      <span className="bg-white/30 px-3 py-1 rounded-lg font-bold text-xs border border-white/40 text-white shadow">
+                        <i className="fas fa-utensils"></i> {restaurant.cuisine_type}
+                      </span>
+                    )}
+                    {restaurant.address && (
+                      <span className="bg-white/30 px-3 py-1 rounded-lg font-bold text-xs border border-white/40 text-white shadow">
+                        <i className="fas fa-map-marker-alt"></i> {restaurant.address}
+                      </span>
+                    )}
+                    {restaurant.phone && (
+                      <span className="bg-white/30 px-3 py-1 rounded-lg font-bold text-xs border border-white/40 text-white shadow">
+                        <i className="fas fa-phone"></i> {restaurant.phone}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                    {/* Verification Status */}
+                    {restaurant.is_verified ? (
+                      <span className="bg-green-600 px-3 py-1 rounded-lg font-bold text-xs border border-green-300 text-white flex items-center gap-1 shadow">
+                        <i className="fas fa-check-circle"></i> Verified
+                      </span>
+                    ) : (
+                      <span className="bg-red-600 px-3 py-1 rounded-lg font-bold text-xs border border-red-300 text-white flex items-center gap-1 shadow">
+                        <i className="fas fa-times-circle"></i> Not Verified
+                      </span>
+                    )}
+                    {/* Open/Closed Status */}
+                    {typeof getIsOpen === 'function' && getIsOpen(restaurant) ? (
+                      <span className="bg-green-500 px-3 py-1 rounded-lg font-bold text-xs border border-green-300 text-white flex items-center gap-1 shadow">
+                        <i className="fas fa-door-open"></i> Open Now
+                      </span>
+                    ) : (
+                      <span className="bg-gray-700 px-3 py-1 rounded-lg font-bold text-xs border border-gray-300 text-white flex items-center gap-1 shadow">
+                        <i className="fas fa-door-closed"></i> Closed
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+      <div className="absolute inset-0 w-full h-full">
+        {/* Previous slide (exiting right) */}
+        <div
+          key={prevIdx}
+          className="w-full h-full flex-shrink-0 flex items-center justify-center slide-exit"
+          style={{
+            width: '100%',
+            height: '100%',
+            position: 'absolute',
+            left: 0,
+            top: 0,
+            zIndex: 1,
+            transition: 'transform 0.8s cubic-bezier(0.4,0.8,0.4,1)',
+            transform: 'translateX(100%)',
+          }}
+        >
+          <Image
+            src={allImages[prevIdx].src}
+            alt={allImages[prevIdx].alt}
+            fill
+            priority
+            {...getImageProps(allImages[prevIdx])}
+          />
+        </div>
+        {/* Current slide (entering from left) */}
+        <div
+          key={currIdx}
+          className="w-full h-full flex-shrink-0 flex items-center justify-center slide-enter"
+          style={{
+            width: '100%',
+            height: '100%',
+            position: 'absolute',
+            left: 0,
+            top: 0,
+            zIndex: 2,
+            transition: 'transform 0.8s cubic-bezier(0.4,0.8,0.4,1)',
+            transform: 'translateX(0%)',
+          }}
+        >
+          <Image
+            src={allImages[currIdx].src}
+            alt={allImages[currIdx].alt}
+            fill
+            priority
+            {...getImageProps(allImages[currIdx])}
+          />
+        </div>
+      </div>
+      <style jsx>{`
+        .slide-enter {
+          animation: slideInLeft 0.8s cubic-bezier(0.4,0.8,0.4,1);
+        }
+        .slide-exit {
+          animation: slideOutRight 0.8s cubic-bezier(0.4,0.8,0.4,1);
+        }
+        @keyframes slideInLeft {
+          from { transform: translateX(-100%); }
+          to { transform: translateX(0); }
+        }
+        @keyframes slideOutRight {
+          from { transform: translateX(0); }
+          to { transform: translateX(100%); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+// Skeleton Loader Components
+function Skeleton({ className = '' }) {
+  return <div className={`animate-pulse bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 ${className}`}></div>;
+}
+
+function RestaurantSkeleton() {
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
+      {/* Banner Skeleton */}
+      <div className="bg-white shadow-lg mb-6 border border-gray-200 overflow-hidden rounded-2xl">
+        <Skeleton className="h-72 w-full" />
+      </div>
+      {/* Quick Info Bar Skeleton */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        {[1,2,3,4].map(i => (
+          <Skeleton key={i} className="h-24 rounded-xl" />
+        ))}
+      </div>
+      <div className="flex flex-col lg:flex-row-reverse gap-6">
+        {/* Sidebar Skeleton */}
+        <div className="lg:w-1/4">
+          <div className="bg-white rounded-2xl shadow-lg p-4 border border-gray-200 flex flex-col gap-4">
+            <Skeleton className="h-10 w-full rounded-lg mb-4" />
+            <Skeleton className="h-16 w-full rounded-lg mb-4" />
+            <Skeleton className="h-40 w-full rounded-lg mb-4" />
+            <Skeleton className="h-12 w-full rounded-lg mb-4" />
+          </div>
+        </div>
+        {/* Main Content Skeleton */}
+        <div className="lg:w-3/4 pl-4 lg:pl-6">
+          <Skeleton className="h-12 w-full rounded-xl mb-6" />
+          {[...Array(3)].map((_,i) => (
+            <Skeleton key={i} className="h-32 w-full rounded-xl mb-4" />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 import { useState, useEffect, useRef } from 'react'
+import { createClient } from '@supabase/supabase-js'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useCart } from '@/lib/hooks/useCart'
@@ -8,75 +241,74 @@ import { useCartAnimation, triggerCartAnimation } from '@/components/cart/CartAn
 import CustomizeModal from '@/components/cart/CustomizeModal'
 import RestaurantSwitchModal from '@/components/cart/RestaurantSwitchModal'
 
+
+// Define MenuItem and Restaurant interfaces as before
 interface MenuItem {
+  id: string;
+  restaurant_id: string;
+  item_name: string;
+  category: string;
+  category_item?: string;
+  price: number;
+  offer_price?: number | null;
+  image_url?: string | null;
+  in_stock?: boolean;
+  description?: string;
+  customizations?: any[];
+  is_active?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+interface Restaurant {
   id: string
   name: string
-  description: string
-  price: number
-  sizes?: { id: string; name: string; price: number }[]
-  addons?: { id: string; name: string; price: number }[]
-  image?: string
-  isVeg: boolean
-  category: string
-  isPopular?: boolean
-  spiceLevel?: number
-  prepTime?: number
+  image: string
+  isOpen: boolean
+  rating: number
+  reviews: number
+  cuisines: string[]
+  location: string
+  discountOffer?: {
+    percentage: number
+    description: string
+  }
+  deliveryTime: number
+  deliveryFee: number
+  openingHours: string
+  closingHours: string
+  phone: string
+  restaurant_id: string;
+  restaurant_name: string;
+  store_img?: string;
+  cuisine_type?: string;
+  address?: string;
+  is_active?: boolean;
+  opening_time?: string;
+  closing_time?: string;
+  avg_rating?: number;
+  total_reviews?: number;
+  delivery_time_minutes?: number;
+  delivery_fee?: number;
+  fssai_license?: string;
 }
 
-interface RestaurantPageProps {
-  restaurant?: {
-    id: string
-    name: string
-    image: string
-    isOpen: boolean
-    rating: number
-    reviews: number
-    cuisines: string[]
-    location: string
-    discountOffer?: {
-      percentage: number
-      description: string
-    }
-    deliveryTime: number
-    deliveryFee: number
-    openingHours: string
-    closingHours: string
-    phone: string
-    address: string
-    fssaiLicense: string
-    images: string[]
-  }
-}
-const defaultRestaurant: RestaurantPageProps['restaurant'] = {
-  id: '1',
-  name: 'Hot Chappathis Veg And Non Veg',
-  image: '/img/hc.png',
-  isOpen: false,
-  rating: 4.0,
-  reviews: 97,
-  cuisines: ['North Indian', 'Street Food', 'Chinese', 'Biryani', 'Beverages'],
-  location: 'Thiruporur, Chennai',
-  deliveryTime: 40,
-  deliveryFee: 35,
-  openingHours: '11:30 AM',
-  closingHours: '11:00 PM',
-  phone: '+919344198127',
-  address: '266/16C1B, Kannagapattu, OMR Road, Thiruporur, Chennai',
-  fssaiLicense: '10421000001362',
-  images: [
-    'https://images.unsplash.com/photo-1563379091339-03b21ab4a104?w=800&h=600&fit=crop',
-    'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=800&h=600&fit=crop',
-  ],
-  discountOffer: {
-    percentage: 25,
-    description: '25% off on first order above ₹299'
-  }
-}
-
-export default function RestaurantPage(props: RestaurantPageProps) {
-  const restaurant = props.restaurant ?? defaultRestaurant
-  const router = useRouter()
-  const { items, addToCart, decreaseItem, getCartQuantity, isFromDifferentRestaurant, restaurantName: currentCartRestaurantName } = useCart()
+// Main component function
+function RestaurantPage({ restaurantId }: { restaurantId: string }) {
+  // Create Supabase client (move inside component)
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+  const router = useRouter();
+  const [restaurant, setRestaurant] = useState<Restaurant | null>(null)
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([])
+  const [offers, setOffers] = useState<any[]>([])
+  const [loadingRestaurant, setLoadingRestaurant] = useState(true)
+  const [loadingMenu, setLoadingMenu] = useState(true)
+  const [loadingOffers, setLoadingOffers] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const { items, addToCart, decreaseItem, getCartQuantity, isFromDifferentRestaurant, restaurantName: currentCartRestaurantName, clearCartItems } = useCart()
   const { addFlyingAnimation } = useCartAnimation()
 
   // State for UI
@@ -87,7 +319,34 @@ export default function RestaurantPage(props: RestaurantPageProps) {
   const [localVegOnly, setLocalVegOnly] = useState(false)
   const [isTabsSticky, setIsTabsSticky] = useState(false)
   const [isHeaderSticky, setIsHeaderSticky] = useState(false)
-  
+
+  // Helper: Calculate open/closed status
+  function getIsOpen(restaurant: any) {
+    if (!restaurant) return false;
+    if (restaurant.is_active === false) return false;
+    try {
+      const now = new Date();
+      const opening = restaurant.opening_time ? parseTime(restaurant.opening_time) : null;
+      const closing = restaurant.closing_time ? parseTime(restaurant.closing_time) : null;
+      if (!opening || !closing) return false;
+      // Handles overnight closing (e.g. 22:00 to 06:00)
+      if (closing <= opening) {
+        return (now >= opening) || (now <= closing);
+      }
+      return now >= opening && now <= closing;
+    } catch {
+      return false;
+    }
+  }
+
+  function parseTime(timeStr: string) {
+    // Expects 'HH:mm' or 'HH:mm:ss' (24h)
+    const [h, m, s] = timeStr.split(':').map(Number);
+    const now = new Date();
+    now.setHours(h, m || 0, s || 0, 0);
+    return now;
+  }
+
   // State for restaurant switch confirmation
   const [showSwitchModal, setShowSwitchModal] = useState(false)
   const [pendingAddItem, setPendingAddItem] = useState<any | null>(null)
@@ -102,156 +361,69 @@ export default function RestaurantPage(props: RestaurantPageProps) {
   const photosSectionRef = useRef<HTMLDivElement>(null)
   const reviewsSectionRef = useRef<HTMLDivElement>(null)
   const infoSectionRef = useRef<HTMLDivElement>(null)
-  
 
-  // Menu items data
-  const menuItems: MenuItem[] = [
-    {
-      id: '1',
-      name: 'Paneer Butter Masala',
-      description: 'Fresh cottage cheese cubes in rich, creamy tomato gravy with butter and aromatic spices',
-      price: 280,
-      sizes: [
-        { id: 's', name: 'Small', price: 0 },
-        { id: 'm', name: 'Regular', price: 40 },
-        { id: 'l', name: 'Large', price: 80 },
-      ],
-      addons: [
-        { id: 'a1', name: 'Extra Paneer', price: 60 },
-        { id: 'a2', name: 'Extra Gravy', price: 40 },
-      ],
-      image: 'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?w=400&h=300&fit=crop',
-      isVeg: true,
-      category: 'North Indian',
-      isPopular: true,
-      spiceLevel: 2,
-      prepTime: 20
-    },
-    {
-      id: '2',
-      name: 'Chicken Biryani',
-      description: 'Fragrant basmati rice layered with tender chicken pieces, saffron, and royal spices',
-      price: 320,
-      sizes: [
-        { id: 'r', name: 'Regular', price: 0 },
-        { id: 'h', name: 'Half', price: -80 },
-        { id: 'f', name: 'Family', price: 200 },
-      ],
-      addons: [
-        { id: 'a3', name: 'Boiled Egg', price: 20 },
-        { id: 'a4', name: 'Extra Masala', price: 30 },
-      ],
-      image: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a104?w=400&h=300&fit=crop',
-      isVeg: false,
-      category: 'Biryani',
-      isPopular: true,
-      spiceLevel: 3,
-      prepTime: 25
-    },
-    {
-      id: '3',
-      name: 'Chappathi with Kurma',
-      description: 'Soft, fresh chappathis served with flavorful mixed vegetable kurma',
-      price: 180,
-      image: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&h=300&fit=crop',
-      isVeg: true,
-      category: 'North Indian',
-      isPopular: true,
-      spiceLevel: 1,
-      prepTime: 15
-    },
-    {
-      id: '4',
-      name: 'Chicken 65',
-      description: 'Spicy deep-fried chicken appetizer with South Indian flavors and curry leaves',
-      price: 250,
-      image: 'https://images.unsplash.com/photo-1565958011703-44f9829ba187?w=400&h=300&fit=crop',
-      isVeg: false,
-      category: 'Street Food',
-      spiceLevel: 4,
-      prepTime: 18
-    },
-    {
-      id: '5',
-      name: 'Veg Fried Rice',
-      description: 'Chinese style fried rice with fresh vegetables, soy sauce, and aromatic garlic',
-      price: 220,
-      image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=300&fit=crop',
-      isVeg: true,
-      category: 'Chinese',
-      spiceLevel: 2,
-      prepTime: 15
-    },
-    {
-      id: '6',
-      name: 'Mutton Rogan Josh',
-      description: 'Tender mutton pieces in rich Kashmiri style gravy with authentic spices',
-      price: 380,
-      image: 'https://images.unsplash.com/photo-1603105037880-880cd4edfb0d?w=400&h=300&fit=crop',
-      isVeg: false,
-      category: 'North Indian',
-      isPopular: true,
-      spiceLevel: 3,
-      prepTime: 30
-    },
-    {
-      id: '7',
-      name: 'Masala Dosa',
-      description: 'Crispy rice crepe filled with spiced potato masala, served with sambar and chutney',
-      price: 160,
-      image: 'https://images.unsplash.com/photo-1630383249892-30c70a5fe451?w=400&h=300&fit=crop',
-      isVeg: true,
-      category: 'Street Food',
-      spiceLevel: 2,
-      prepTime: 12
-    },
-    {
-      id: '8',
-      name: 'Fresh Lime Soda',
-      description: 'Refreshing lime drink with soda, mint, and a hint of black salt',
-      price: 80,
-      image: 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=400&h=300&fit=crop',
-      isVeg: true,
-      category: 'Beverages',
-      spiceLevel: 0,
-      prepTime: 5
-    },
-    {
-      id: '9',
-      name: 'Butter Naan',
-      description: 'Soft, buttery leavened bread baked in tandoor',
-      price: 90,
-      image: 'https://images.unsplash.com/photo-1633945274415-a3c539d5c12a?w=400&h=300&fit=crop',
-      isVeg: true,
-      category: 'Breads',
-      spiceLevel: 0,
-      prepTime: 10
-    },
-    {
-      id: '10',
-      name: 'Veg Manchurian',
-      description: 'Crispy vegetable balls in sweet and spicy Chinese sauce',
-      price: 240,
-      image: 'https://images.unsplash.com/photo-1563245372-f21724e3856d?w=400&h=300&fit=crop',
-      isVeg: true,
-      category: 'Chinese',
-      isPopular: true,
-      spiceLevel: 3,
-      prepTime: 20
-    }
-  ]
+  // Fetch data from Supabase
+  useEffect(() => {
+    setError(null);
+    setLoadingRestaurant(true);
+    setLoadingMenu(true);
+    setLoadingOffers(true);
 
-  const categories = ['All', 'North Indian', 'Biryani', 'Street Food', 'Chinese', 'Beverages', 'Breads']
+    // Fetch restaurant details
+    supabase
+      .from('restaurants')
+      .select('*')
+      .eq('restaurant_id', restaurantId)
+      .single()
+      .then(({ data, error: restaurantError }) => {
+        if (restaurantError || !data) {
+          setError('Restaurant not found');
+        } else {
+          setRestaurant(data);
+        }
+        setLoadingRestaurant(false);
+      });
 
+    // Fetch menu items
+    supabase
+      .from('menu_items')
+      .select('*')
+      .eq('restaurant_id', restaurantId)
+      .eq('is_active', true)
+      .then(({ data, error: menuError }) => {
+        if (!menuError) setMenuItems(data || []);
+        setLoadingMenu(false);
+      });
+
+    // Fetch offers
+    const now = new Date().toISOString();
+    supabase
+      .from('offers')
+      .select('*')
+      .eq('restaurant_id', restaurantId)
+      .gt('valid_till', now)
+      .then(({ data, error: offersError }) => {
+        if (!offersError) setOffers(data || []);
+        setLoadingOffers(false);
+      });
+  }, [restaurantId]);
+
+  // Show unique category_item values in sidebar
+  const categories = ['All', ...Array.from(new Set(menuItems.map(item => item.category_item).filter(Boolean)))]
+
+  // Filtered menu items
   const filteredMenuItems = menuItems.filter(item => {
-    const categoryMatch = selectedCategory === 'All' || item.category === selectedCategory
-    const vegMatch = !localVegOnly || item.isVeg
-    const searchMatch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                       item.description.toLowerCase().includes(searchQuery.toLowerCase())
-    return categoryMatch && vegMatch && searchMatch
-  })
+    const categoryMatch = selectedCategory === 'All' || item.category_item === selectedCategory;
+    // Veg Only toggle: show only items where category is 'VEG' (case-insensitive)
+    const vegMatch = !localVegOnly || (item.category && item.category.toUpperCase() === 'VEG');
+    const searchMatch = (item.item_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.description?.toLowerCase().includes(searchQuery.toLowerCase()));
+    return categoryMatch && vegMatch && searchMatch;
+  });
 
-  const popularItems = menuItems.filter(item => item.isPopular)
+  // Popular items (if any flag exists)
+  // You can define popularItems logic if you have a flag, else leave empty
+  const popularItems: MenuItem[] = [];
 
   // Scroll listener for sticky tabs: only toggle after user actually scrolls
   useEffect(() => {
@@ -310,7 +482,11 @@ export default function RestaurantPage(props: RestaurantPageProps) {
   }
 
   // Handle confirmation from restaurant switch modal
-  const handleConfirmSwitch = () => {
+  const handleConfirmSwitch = (keepBoth: boolean) => {
+    if (!keepBoth) {
+      // Clear cart first
+      clearCartItems()
+    }
     if (pendingAddItem) {
       performAddToCart(pendingAddItem, pendingItemElement)
     }
@@ -327,7 +503,7 @@ export default function RestaurantPage(props: RestaurantPageProps) {
 
   const handleAddToCart = (itemId: string, itemName: string, itemElement?: HTMLElement | null) => {
     const menuItem = menuItems.find(m => m.id === itemId)
-    if (!menuItem) return
+    if (!menuItem || !restaurant) return
 
     // If this item has sizes or addons, open modal instead of adding directly
     if ((menuItem.sizes && menuItem.sizes.length > 0) || (menuItem.addons && menuItem.addons.length > 0)) {
@@ -359,7 +535,7 @@ export default function RestaurantPage(props: RestaurantPageProps) {
 
   // Called when modal selection is confirmed
   const handleConfirmCustomization = ({ quantity, size, addons }: { quantity: number; size?: { id: string; name: string; price: number }; addons?: { id: string; name: string; price: number }[] }) => {
-    if (!customItem) return
+    if (!customItem || !restaurant) return
 
     const itemData = {
       id: customItem.id,
@@ -410,6 +586,41 @@ export default function RestaurantPage(props: RestaurantPageProps) {
     }
   }
 
+  // Show skeleton loader first, then fade to content
+  const [showSkeleton, setShowSkeleton] = useState(true);
+  useEffect(() => {
+    setShowSkeleton(true);
+  }, [restaurantId]);
+  useEffect(() => {
+    if (!loadingRestaurant && !loadingMenu && !loadingOffers) {
+      // Fade out skeleton after data loads
+      const timeout = setTimeout(() => setShowSkeleton(false), 200);
+      return () => clearTimeout(timeout);
+    }
+  }, [loadingRestaurant, loadingMenu, loadingOffers]);
+
+  if (showSkeleton) {
+    return <RestaurantSkeleton />;
+  }
+  // Only show error after loading completes and data is missing
+  if (!loadingRestaurant && !restaurant) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#f5f5f5]">
+        <img src="/img/ndf.png" alt="Not Found" style={{ maxWidth: 320, width: '100%', height: 'auto', opacity: 0.85 }} />
+      </div>
+    );
+  }
+  if (!loadingRestaurant && error) {
+    return <div className="min-h-screen flex items-center justify-center text-xl text-red-500">{error}</div>;
+  }
+
+  // Calculate open/closed status
+  const isOpen = getIsOpen(restaurant);
+
+  // Offers logic
+  const activeOffer = offers && offers.length > 0 ? offers[0] : null;
+  // Menu/Offers loading/empty states can be handled in the UI below as needed
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
       {/* Notification Toast */}
@@ -425,7 +636,7 @@ export default function RestaurantPage(props: RestaurantPageProps) {
         </div>
       )}
       <div 
-        className={`bg-white shadow-lg mb-6 border border-gray-200 overflow-hidden transition-all duration-300 rounded-2xl`}
+        className={`bg-white shadow-lg mb-6 border border-gray-200 overflow-hidden transition-all duration-300 rounded-2xl mx-auto px-[15px]`}
       >
         {/* Back to Restaurants Button */}
         <button
@@ -436,75 +647,70 @@ export default function RestaurantPage(props: RestaurantPageProps) {
           <span className="hidden sm:inline">Back</span>
         </button>
 
-        {/* Restaurant Header Card - Enhanced */}
-        <div ref={headerRef} className="relative bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 rounded-2xl shadow-lg overflow-hidden mb-8 border-0 transform hover:scale-[1.005] transition-transform duration-500">
-          <div className="relative h-56 md:h-72">
-            <Image
-              src={restaurant.image}
-              alt={restaurant.name}
-              fill
-              priority
-              className="object-cover opacity-30"
+        {/* Restaurant Banner & Info */}
+        <div ref={headerRef} className="relative rounded-2xl shadow-lg overflow-hidden mb-8 border-0">
+          {/* Banner & Premium Overlay */}
+          <div className="relative w-full h-56 md:h-72">
+            <BannerCarousel
+              images={menuItems
+                .filter(item => !!item.image_url)
+                .sort((a, b) => ((b.avg_rating ?? b.rating ?? 0) - (a.avg_rating ?? a.rating ?? 0)))
+                .slice(0, 5)
+                .map(item => ({
+                  src: item.image_url,
+                  alt: item.item_name,
+                }))}
+              fallback={restaurant.store_img || '/img/placeholder.png'}
+              alt={restaurant.restaurant_name}
+              restaurant={restaurant}
+              getIsOpen={getIsOpen}
             />
-            
-            {/* Gradient Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
-            
-            {/* Restaurant Status Badge */}
-            <div className={`absolute top-4 right-4 z-20 ${restaurant.isOpen ? 'bg-gradient-to-r from-green-500 to-emerald-600' : 'bg-gradient-to-r from-red-500 to-pink-600'} text-white px-3 py-2 rounded-lg font-bold text-xs flex items-center gap-2 shadow-lg backdrop-blur-sm`}>
-              <i className={`fas ${restaurant.isOpen ? 'fa-clock' : 'fa-lock'} text-lg`}></i>
-              {restaurant.isOpen ? 'Open Now' : 'Closed'}
-            </div>
-
-            {/* Discount Badge */}
-            {restaurant.discountOffer && (
-              <div className="absolute top-16 right-4 z-20 animate-bounce-slow">
-                <div className="bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 text-white px-5 py-3 rounded-2xl font-bold text-sm shadow-2xl flex items-center gap-3 backdrop-blur-sm border border-white/20">
-                  <i className="fas fa-bolt text-lg"></i>
-                  <div>
-                    <p className="text-lg font-black">{restaurant.discountOffer.percentage}% OFF</p>
-                    <p className="text-xs opacity-90">{restaurant.discountOffer.description}</p>
+            {/* Premium Store Details Overlay (always visible) */}
+            <div className="absolute inset-0 flex flex-col justify-end pointer-events-none">
+              <div className="w-full px-5 md:px-8 pb-5 md:pb-8 pt-8 bg-gradient-to-t from-black/80 via-black/40 to-transparent rounded-2xl">
+                <div className="max-w-3xl">
+                  <h1 className="text-2xl md:text-3xl font-black mb-2 drop-shadow-2xl tracking-tight">
+                    {restaurant.restaurant_name}
+                  </h1>
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                    {restaurant.cuisine_type && (
+                      <span className="bg-white/20 px-3 py-1 rounded-lg font-bold text-xs border border-white/30">
+                        <i className="fas fa-utensils"></i> {restaurant.cuisine_type}
+                      </span>
+                    )}
+                    {restaurant.address && (
+                      <span className="bg-white/20 px-3 py-1 rounded-lg font-bold text-xs border border-white/30">
+                        <i className="fas fa-map-marker-alt"></i> {restaurant.address}
+                      </span>
+                    )}
+                    {restaurant.phone && (
+                      <span className="bg-white/20 px-3 py-1 rounded-lg font-bold text-xs border border-white/30">
+                        <i className="fas fa-phone"></i> {restaurant.phone}
+                      </span>
+                    )}
                   </div>
-                </div>
-              </div>
-            )}
-
-            {/* Restaurant Info */}
-            <div className="absolute bottom-0 left-0 right-0 p-5 md:p-8 text-white">
-              <div className="max-w-3xl">
-                <h1 className="text-2xl md:text-3xl font-black mb-3 drop-shadow-2xl tracking-tight bg-gradient-to-r from-white to-gray-200 bg-clip-text text-transparent">
-                  {restaurant.name}
-                </h1>
-                
-                {/* Tags Row */}
-                <div className="flex flex-wrap items-center gap-2 mb-4">
-                  <div className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-lg font-bold text-xs flex items-center gap-1 border border-white/30">
-                    <i className="fas fa-star text-amber-300 animate-pulse"></i>
-                    <span className="text-sm">{restaurant.rating}</span>
-                    <span className="text-white/90 text-xs">({restaurant.reviews} ratings)</span>
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                    {/* Verification Status */}
+                    {restaurant.is_verified ? (
+                      <span className="bg-green-600/80 px-3 py-1 rounded-lg font-bold text-xs border border-green-300 text-white flex items-center gap-1">
+                        <i className="fas fa-check-circle"></i> Verified
+                      </span>
+                    ) : (
+                      <span className="bg-red-600/80 px-3 py-1 rounded-lg font-bold text-xs border border-red-300 text-white flex items-center gap-1">
+                        <i className="fas fa-times-circle"></i> Not Verified
+                      </span>
+                    )}
+                    {/* Open/Closed Status */}
+                    {getIsOpen(restaurant) ? (
+                      <span className="bg-green-500/80 px-3 py-1 rounded-lg font-bold text-xs border border-green-300 text-white flex items-center gap-1">
+                        <i className="fas fa-door-open"></i> Open Now
+                      </span>
+                    ) : (
+                      <span className="bg-gray-500/80 px-3 py-1 rounded-lg font-bold text-xs border border-gray-300 text-white flex items-center gap-1">
+                        <i className="fas fa-door-closed"></i> Closed
+                      </span>
+                    )}
                   </div>
-                  
-                  <div className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-lg font-bold text-xs flex items-center gap-1 border border-white/30">
-                    <i className="fas fa-utensils"></i>
-                    {restaurant.cuisines.slice(0, 3).join(', ')}
-                  </div>
-                  
-                  <div className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-lg font-bold text-xs flex items-center gap-1 border border-white/30">
-                    <i className="fas fa-map-marker-alt"></i>
-                    {restaurant.location}
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex flex-wrap gap-2">
-                  <button className="px-4 py-2 text-sm bg-gradient-to-r from-[#FF6B35] to-orange-500 text-white font-bold rounded-lg hover:shadow-xl transition-all duration-300 hover:scale-105 active:scale-95">
-                    <i className="fas fa-heart mr-1"></i>
-                    Save
-                  </button>
-                  <button className="px-4 py-2 text-sm bg-white/20 backdrop-blur-md text-white font-bold rounded-lg hover:bg-white/30 transition-all duration-300 border border-white/30">
-                    <i className="fas fa-share mr-2"></i>
-                    Share
-                  </button>
                 </div>
               </div>
             </div>
@@ -512,24 +718,36 @@ export default function RestaurantPage(props: RestaurantPageProps) {
         </div>
 
         {/* Quick Info Bar - Enhanced */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          {[
-            { icon: 'fa-clock', color: 'from-blue-500 to-cyan-500', label: 'Delivery Time', value: `${restaurant.deliveryTime} min` },
-            { icon: 'fa-rupee-sign', color: 'from-green-500 to-emerald-600', label: 'Delivery Fee', value: `₹${restaurant.deliveryFee}` },
-            { icon: 'fa-motorcycle', color: 'from-purple-500 to-pink-500', label: 'Min. Order', value: '₹199' },
-            { icon: 'fa-award', color: 'from-amber-500 to-orange-500', label: 'Rating', value: `${restaurant.rating} ★` },
-          ].map((item, idx) => (
-            <div 
-              key={idx}
-              className="bg-white rounded-xl shadow-lg p-4 border border-gray-200 transform hover:-translate-y-1 transition-all duration-300 group cursor-pointer"
-            >
-              <div className={`w-12 h-12 rounded-lg bg-gradient-to-r ${item.color} flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform duration-300`}>
-                <i className={`fas ${item.icon} text-white text-lg`}></i>
-              </div>
-              <p className="text-xs text-gray-600 font-semibold text-center mb-1">{item.label}</p>
-              <p className="text-lg font-black text-gray-900 text-center">{item.value}</p>
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+          {/* Delivery Time Card (with avg) */}
+          <div className="bg-white rounded-xl shadow-lg p-4 border border-gray-200 transform hover:-translate-y-1 transition-all duration-300 group cursor-pointer">
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform duration-300">
+              <i className="fas fa-clock text-white text-lg"></i>
             </div>
-          ))}
+            <p className="text-xs text-gray-600 font-semibold text-center mb-1">Delivery Time</p>
+            <p className="text-lg font-black text-gray-900 text-center">
+              {restaurant.delivery_time_minutes ? `${restaurant.delivery_time_minutes} min` : 'N/A'}
+              {restaurant.delivery_time_minutes && <span className="block text-xs font-normal text-gray-500">Avg</span>}
+            </p>
+          </div>
+          {/* Min. Order Card (icon visible and larger) */}
+          <div className="bg-white rounded-xl shadow-lg p-4 border border-gray-200 transform hover:-translate-y-1 transition-all duration-300 group cursor-pointer">
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform duration-300">
+              <i className="fas fa-motorcycle text-white text-3xl"></i>
+            </div>
+            <p className="text-xs text-gray-600 font-semibold text-center mb-1">Min. Order</p>
+            <p className="text-lg font-black text-gray-900 text-center">₹199</p>
+          </div>
+          {/* Rating Card (actual from table) */}
+          <div className="bg-white rounded-xl shadow-lg p-4 border border-gray-200 transform hover:-translate-y-1 transition-all duration-300 group cursor-pointer">
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform duration-300">
+              <i className="fas fa-award text-white text-lg"></i>
+            </div>
+            <p className="text-xs text-gray-600 font-semibold text-center mb-1">Rating</p>
+            <p className="text-lg font-black text-gray-900 text-center">
+              {restaurant.avg_rating !== undefined && restaurant.avg_rating !== null ? `${restaurant.avg_rating} ★` : 'N/A'}
+            </p>
+          </div>
         </div>
 
         {/* Main Content Area */}
@@ -793,28 +1011,39 @@ export default function RestaurantPage(props: RestaurantPageProps) {
                           {filteredMenuItems.map((item) => (
                             <div key={item.id} className="bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-200 group">
                               <div className="flex">
-                                {item.image && (
+                                {item.image_url ? (
                                   <div className="relative w-28 h-28 flex-shrink-0 overflow-hidden">
                                     <Image
-                                      src={item.image}
-                                      alt={item.name}
+                                      src={item.image_url}
+                                      alt={item.item_name}
                                       fill
                                       className="object-cover group-hover:scale-110 transition-transform duration-500"
                                     />
+                                  </div>
+                                ) : (
+                                  <div className="relative w-28 h-28 flex-shrink-0 overflow-hidden bg-gray-100 flex items-center justify-center">
+                                    <i className="fas fa-utensils text-3xl text-gray-300"></i>
                                   </div>
                                 )}
                                 <div className="flex-1 p-4">
                                   <div className="flex items-start justify-between mb-2">
                                     <div>
-                                      <h3 className="font-bold text-lg text-gray-900 flex items-center gap-1 mb-1">
-                                        {item.name}
-                                        {item.isVeg ? (
-                                          <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
-                                            <i className="fas fa-leaf mr-1"></i>Veg
+                                      <h3 className="font-bold text-lg text-gray-900 flex items-center gap-2 mb-1">
+                                        {item.item_name}
+                                        {item.category_item && (
+                                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${item.category_item.toUpperCase() === 'VEG' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                            <i className={`fas ${item.category_item.toUpperCase() === 'VEG' ? 'fa-leaf' : 'fa-drumstick-bite'} mr-1`}></i>
+                                            {item.category_item}
                                           </span>
-                                        ) : (
-                                          <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-medium">
-                                            <i className="fas fa-drumstick-bite mr-1"></i>Non-Veg
+                                        )}
+                                        {item.customizations && item.customizations.length > 0 && (
+                                          <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">
+                                            <i className="fas fa-cogs mr-1"></i> Customizable
+                                          </span>
+                                        )}
+                                        {item.offer_price && item.offer_price < item.price && (
+                                          <span className="ml-2 text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">
+                                            <i className="fas fa-tag mr-1"></i> Offer
                                           </span>
                                         )}
                                       </h3>
@@ -823,29 +1052,32 @@ export default function RestaurantPage(props: RestaurantPageProps) {
                                           <i className="fas fa-tag"></i>
                                           {item.category}
                                         </span>
-                                        {item.spiceLevel !== undefined && (
+                                        {item.category_item && (
                                           <span className="flex items-center gap-1">
-                                            <i className="fas fa-pepper-hot"></i>
-                                            {item.spiceLevel}/3
-                                          </span>
-                                        )}
-                                        {item.prepTime && (
-                                          <span className="flex items-center gap-1">
-                                            <i className="fas fa-clock"></i>
-                                            {item.prepTime} min
+                                            <i className="fas fa-layer-group"></i>
+                                            {item.category_item}
                                           </span>
                                         )}
                                       </div>
                                     </div>
-                                    <span className="text-xl font-black text-[#FF6B35]">₹{item.price}</span>
+                                    <span className="text-xl font-black text-[#FF6B35]">
+                                      {item.offer_price && item.offer_price < item.price ? (
+                                        <>
+                                          <span className="line-through text-gray-400 mr-2">₹{item.price}</span>
+                                          ₹{item.offer_price}
+                                        </>
+                                      ) : (
+                                        <>₹{item.price}</>
+                                      )}
+                                    </span>
                                   </div>
                                   <p className="text-gray-600 text-sm mb-3">{item.description}</p>
                                   <div className="flex items-center justify-between">
                                     <div className="text-sm text-gray-500">
-                                      {item.isPopular && (
-                                        <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 px-3 py-1 rounded-full">
-                                          <i className="fas fa-star text-xs"></i>
-                                          Popular Choice
+                                      {item.in_stock === false && (
+                                        <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-400 px-3 py-1 rounded-full">
+                                          <i className="fas fa-times-circle text-xs"></i>
+                                          Out of Stock
                                         </span>
                                       )}
                                     </div>
@@ -860,7 +1092,7 @@ export default function RestaurantPage(props: RestaurantPageProps) {
                                           </button>
                                           <span className="font-bold text-lg w-8 text-center">{getCartQuantity(item.id)}</span>
                                           <button 
-                                            onClick={(e) => handleAddToCart(item.id, item.name, e.currentTarget as HTMLElement)}
+                                            onClick={(e) => handleAddToCart(item.id, item.item_name, e.currentTarget as HTMLElement)}
                                             className="w-10 h-10 rounded-full bg-green-50 text-green-600 flex items-center justify-center hover:bg-green-100 hover:scale-110 transition-all duration-200 shadow-sm"
                                           >
                                             <i className="fas fa-plus"></i>
@@ -868,8 +1100,9 @@ export default function RestaurantPage(props: RestaurantPageProps) {
                                         </div>
                                       ) : (
                                         <button
-                                          onClick={(e) => handleAddToCart(item.id, item.name, e.currentTarget as HTMLElement)}
+                                          onClick={(e) => handleAddToCart(item.id, item.item_name, e.currentTarget as HTMLElement)}
                                           className="px-5 py-2.5 bg-gradient-to-r from-[#FF6B35] to-orange-500 text-white font-bold rounded-xl hover:shadow-md transition-all duration-300 hover:scale-105 active:scale-95 shadow-sm"
+                                          disabled={item.in_stock === false}
                                         >
                                           <i className="fas fa-plus mr-2"></i>
                                           Add to Cart
@@ -1009,7 +1242,7 @@ export default function RestaurantPage(props: RestaurantPageProps) {
                             </div>
                           </div>
                         </div>
-                        <p className="text-gray-700 leading-relaxed mb-4">"The biryani was absolutely amazing! Perfectly cooked rice, tender chicken pieces, and just the right amount of spices. Delivery was quick and the food arrived piping hot. Definitely ordering again!"</p>
+                        <p className="text-gray-700 leading-relaxed mb-4">&quot;The biryani was absolutely amazing! Perfectly cooked rice, tender chicken pieces, and just the right amount of spices. Delivery was quick and the food arrived piping hot. Definitely ordering again!&quot;</p>
                         <div className="flex items-center gap-3">
                           <span className="text-sm bg-blue-50 text-blue-700 px-3 py-1 rounded-full">
                             <i className="fas fa-thumbs-up mr-1"></i>12 Helpful
@@ -1038,7 +1271,7 @@ export default function RestaurantPage(props: RestaurantPageProps) {
                             </div>
                           </div>
                         </div>
-                        <p className="text-gray-700 leading-relaxed mb-4">"Loved the chappathis and kurma combo! The chappathis were soft and fresh, and the kurma had the perfect balance of flavors. The packaging was excellent and the quantity was sufficient for two people. Great value for money!"</p>
+                        <p className="text-gray-700 leading-relaxed mb-4">&quot;Loved the chappathis and kurma combo! The chappathis were soft and fresh, and the kurma had the perfect balance of flavors. The packaging was excellent and the quantity was sufficient for two people. Great value for money!&quot;</p>
                         <div className="flex items-center gap-4">
                           <div className="flex items-center gap-2">
                             <div className="w-16 h-16 rounded-lg overflow-hidden">
@@ -1310,3 +1543,5 @@ export default function RestaurantPage(props: RestaurantPageProps) {
     </div>
   )
 }
+
+export default RestaurantPage;

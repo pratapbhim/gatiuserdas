@@ -4,9 +4,58 @@ import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { useAppSelector } from '@/lib/hooks'
 import AuthModal from '@/components/auth/AuthModal'
+import UserProfileModal from '@/components/auth/UserProfileModal'
 
 export default function Header() {
+    // Search logic for landing page
+    const [searchQuery, setSearchQuery] = useState('')
+    const [searchResults, setSearchResults] = useState<any[]>([])
+    const [searchLoading, setSearchLoading] = useState(false)
+    const [showSearchResults, setShowSearchResults] = useState(false)
+    const [restaurantList, setRestaurantList] = useState<any[]>([])
+
+    // Fetch restaurant list on mount
+    useEffect(() => {
+      fetch('/api/restaurants')
+        .then(res => res.json())
+        .then(data => setRestaurantList(data || []))
+        .catch(() => setRestaurantList([]));
+    }, []);
+
+    // Search handler
+    const handleLandingSearchInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value
+      setSearchQuery(value)
+      if (!value.trim()) {
+        setSearchResults([])
+        setSearchLoading(false)
+        return
+      }
+      setSearchLoading(true)
+      fetch(`/api/search?q=${encodeURIComponent(value)}`)
+        .then(res => res.json())
+        .then(data => {
+          setSearchResults(data || [])
+          setSearchLoading(false)
+        })
+        .catch(() => {
+          setSearchResults([])
+          setSearchLoading(false)
+        })
+    }
+
+    // Close search results when clicking outside
+    useEffect(() => {
+      const close = (e: MouseEvent) => {
+        if (!(e.target as HTMLElement).closest('.search-box')) {
+          setShowSearchResults(false)
+        }
+      }
+      document.addEventListener('mousedown', close)
+      return () => document.removeEventListener('mousedown', close)
+    }, [])
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
   const [isBusinessDropdownOpen, setIsBusinessDropdownOpen] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [searchPlaceholder, setSearchPlaceholder] = useState('')
@@ -168,14 +217,29 @@ export default function Header() {
               </Link>
 
               {isAuthenticated && user ? (
-                <button className="bg-gradient-to-br from-purple to-[#6a3aff] text-white px-6 py-2.5 rounded-xl font-semibold text-[14px] transition-all duration-200 shadow-[0_4px_16px_rgba(75,42,212,0.25)] hover:shadow-[0_6px_20px_rgba(75,42,212,0.35)] hover:-translate-y-0.5 relative overflow-hidden">
+                <button 
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    console.log('Profile button clicked')
+                    setIsProfileModalOpen(true)
+                  }}
+                  className="bg-gradient-to-br from-purple to-[#6a3aff] text-white px-6 py-2.5 rounded-xl font-semibold text-[14px] transition-all duration-200 shadow-[0_4px_16px_rgba(75,42,212,0.25)] hover:shadow-[0_6px_20px_rgba(75,42,212,0.35)] hover:-translate-y-0.5 relative overflow-hidden z-50"
+                  type="button"
+                >
                   <i className="fas fa-user-circle mr-1.5 text-[13px]"></i>
                   {user.name || user.phone}
                 </button>
               ) : (
                 <button
-                  onClick={() => setIsAuthModalOpen(true)}
-                  className="bg-gradient-to-br from-purple to-[#6a3aff] text-white px-6 py-2.5 rounded-xl font-semibold text-[14px] transition-all duration-200 shadow-[0_4px_16px_rgba(75,42,212,0.25)] hover:shadow-[0_6px_20px_rgba(75,42,212,0.35)] hover:-translate-y-0.5 relative overflow-hidden"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    console.log('Auth button clicked, opening modal')
+                    setIsAuthModalOpen(true)
+                  }}
+                  className="bg-gradient-to-br from-purple to-[#6a3aff] text-white px-6 py-2.5 rounded-xl font-semibold text-[14px] transition-all duration-200 shadow-[0_4px_16px_rgba(75,42,212,0.25)] hover:shadow-[0_6px_20px_rgba(75,42,212,0.35)] hover:-translate-y-0.5 relative overflow-hidden cursor-pointer z-50"
+                  type="button"
                 >
                   <i className="fas fa-user-circle mr-1.5 text-[13px]"></i> Sign In / Up
                 </button>
@@ -250,19 +314,32 @@ export default function Header() {
                   </Link>
                   <div className="border-t border-gray-200 my-2"></div>
                   {isAuthenticated && user ? (
-                    <div className="px-5 py-3">
-                      <div className="text-gray-700 font-medium text-[15px] mb-2">
-                        <i className="fas fa-user-circle mr-3 text-[14px] text-purple"></i>
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setIsMobileMenuOpen(false)
+                        setIsProfileModalOpen(true)
+                      }}
+                      className="w-full px-5 py-3 text-left"
+                      type="button"
+                    >
+                      <div className="text-gray-700 font-medium text-[15px] flex items-center gap-3 hover:text-purple transition-colors">
+                        <i className="fas fa-user-circle text-[14px] text-purple"></i>
                         {user.name || user.phone}
+                        <i className="fas fa-chevron-right text-[10px] text-gray-400 ml-auto"></i>
                       </div>
-                    </div>
+                    </button>
                   ) : (
                     <button
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
                         setIsMobileMenuOpen(false)
                         setIsAuthModalOpen(true)
                       }}
-                      className="w-full mx-5 mb-3 bg-gradient-to-br from-purple to-[#6a3aff] text-white px-6 py-3 rounded-xl font-semibold text-[15px] transition-all duration-200 shadow-[0_4px_16px_rgba(75,42,212,0.25)] hover:shadow-[0_6px_20px_rgba(75,42,212,0.35)]"
+                      className="w-[calc(100%-2.5rem)] mx-5 mb-3 bg-gradient-to-br from-purple to-[#6a3aff] text-white px-6 py-3 rounded-xl font-semibold text-[15px] transition-all duration-200 shadow-[0_4px_16px_rgba(75,42,212,0.25)] hover:shadow-[0_6px_20px_rgba(75,42,212,0.35)]"
+                      type="button"
                     >
                       <i className="fas fa-user-circle mr-2"></i> Sign In / Up
                     </button>
@@ -331,18 +408,71 @@ export default function Header() {
               placeholder="📍 Detecting location…"
               readOnly
             />
-            
-            {/* Search input with typing animation */}
-            <input
-              type="text"
-              placeholder={searchPlaceholder}
-              className="search-input search-input-responsive"
-            />
+            {/* Search input with typing animation and logic */}
+            <div className="relative w-full">
+              <input
+                type="text"
+                placeholder={searchPlaceholder}
+                className="search-input search-input-responsive"
+                value={searchQuery}
+                onChange={handleLandingSearchInput}
+                onFocus={() => setShowSearchResults(true)}
+                style={{width:'100%'}}
+              />
+              {showSearchResults && searchQuery && (
+                <div className="absolute left-0 right-0 top-12 bg-white rounded-xl shadow-xl border border-gray-200 z-50 max-h-96 overflow-y-auto">
+                  {searchLoading && (
+                    <div className="px-4 py-2 text-center text-gray-400 text-sm">Searching…</div>
+                  )}
+                  {!searchLoading && searchResults.length > 0 && searchResults.map((item, idx) => {
+                    // Find restaurant name from restaurantList
+                    const restaurant = restaurantList.find(r => r.restaurant_id === item.restaurant_id || r.id === item.restaurant_id);
+                    const restaurantName = restaurant ? (restaurant.restaurant_name || restaurant.name) : 'Unknown Restaurant';
+                    return (
+                      <div
+                        key={idx}
+                        className="flex items-center gap-3 px-3 py-2 hover:bg-purple-light cursor-pointer transition-colors border-b border-gray-100 last:border-b-0 min-h-[56px]"
+                        style={{ minHeight: 56 }}
+                      >
+                        {item.image_url && (
+                          <img
+                            src={item.image_url}
+                            alt={item.item_name}
+                            className="w-10 h-10 rounded-md object-cover flex-shrink-0"
+                          />
+                        )}
+                        <div className="flex flex-col justify-center flex-1 min-w-0">
+                          <div className="font-semibold text-text text-sm truncate">{item.item_name}</div>
+                          <div className="text-xs text-blue-600 font-semibold truncate">
+                            <a href="#" style={{textDecoration:'underline'}}>{restaurantName}</a>
+                          </div>
+                          <div className="flex gap-2 text-xs text-gray-500 mt-0.5">
+                            {item.category && <span>{item.category}</span>}
+                            {item.category_item && <span className="text-gray-400">{item.category_item}</span>}
+                            {item.price && <span>₹{item.price}</span>}
+                            {typeof item.score !== 'undefined' && <span className="text-green-600">Score: {item.score}</span>}
+                          </div>
+                        </div>
+                        {item.score === 100 && (
+                          <span className="px-2 py-1 bg-mint-light text-purple text-xs font-bold rounded-full ml-2">
+                            Exact Match
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {!searchLoading && searchResults.length === 0 && (
+                    <div className="px-4 py-2 text-center text-gray-400 text-sm">No results found for "{searchQuery}"</div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </header>
 
       <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
+      <UserProfileModal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} />
     </>
   )
 }

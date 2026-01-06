@@ -1,6 +1,6 @@
-'use client'
+"use client"
 
-import { useState } from 'react'
+import React, { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useSearchParams, useRouter } from 'next/navigation'
@@ -53,94 +53,74 @@ const RestaurantListPage = () => {
   const [sortBy, setSortBy] = useState<'rating' | 'delivery' | 'name'>('rating')
   const [selectedCategory, setSelectedCategory] = useState<string | null>(categoryParam)
 
-  // Dummy restaurant data
-  const restaurants: RestaurantCard[] = [
-    {
-      id: '1',
-      name: 'Bikkhane Biryani',
-      cuisines: ['Biryani', 'Hyderabadi'],
-      rating: 4.3,
-      reviews: 33100,
-      deliveryTime: 34,
-      deliveryFee: 40,
-      image: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a104?w=400&h=300&fit=crop',
-      discount: 20,
-      fssaiLicense: '10421000001362',
-      category: 'Biryani'
-    },
-    {
-      id: '2',
-      name: 'Biryanis & More',
-      cuisines: ['Biryani', 'Lucknowi', 'Mughlai'],
-      rating: 4.5,
-      reviews: 28500,
-      deliveryTime: 28,
-      deliveryFee: 30,
-      image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=300&fit=crop',
-      discount: 15,
-      fssaiLicense: '10421000001450',
-      category: 'Biryani'
-    },
-    {
-      id: '3',
-      name: 'Spice Corner',
-      cuisines: ['Indian', 'North Indian', 'South Indian'],
-      rating: 4.2,
-      reviews: 19800,
-      deliveryTime: 35,
-      deliveryFee: 45,
-      image: 'https://images.unsplash.com/photo-1535521066927-ab7c9ab60908?w=400&h=300&fit=crop',
-      isVeg: true,
-      fssaiLicense: '10421000001389',
-      category: 'South Indian'
-    },
-    {
-      id: '4',
-      name: 'The Maharaja Restaurant',
-      cuisines: ['Biryani', 'Mughlai', 'Hyderabadi'],
-      rating: 4.4,
-      reviews: 42300,
-      deliveryTime: 32,
-      deliveryFee: 40,
-      image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=300&fit=crop',
-      discount: 25,
-      fssaiLicense: '10421000001520',
-      category: 'Biryani'
-    },
-    {
-      id: '5',
-      name: 'Hot Chappathis Veg And Non Veg North Indian Restaurant Photos',
-      cuisines: ['Biryani', 'Andhra', 'Lucknowi'],
-      rating: 4.9,
-      reviews: 49790,
-      deliveryTime: 30,
-      deliveryFee: 35,
-      image: '/img/hc.png',
-      discount: 30,
-      fssaiLicense: '10421000001362',
-      category: 'Biryani'
-    },
-    {
-      id: '6',
-      name: 'Garden Fresh Veg Paradise',
-      cuisines: ['Vegetarian', 'North Indian', 'Rajasthani'],
-      rating: 4.1,
-      reviews: 16700,
-      deliveryTime: 25,
-      deliveryFee: 25,
-      image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=300&fit=crop',
-      isVeg: true,
-      fssaiLicense: '10421000001234',
-      category: 'North Indian'
-    },
-  ]
+  // Fetch real restaurant data from API
+  const [restaurants, setRestaurants] = useState<RestaurantCard[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+
+  React.useEffect(() => {
+    setLoading(true);
+    let url = '/api/restaurants';
+    if (selectedCategory) {
+      url = `/api/restaurants/by-category?category=${encodeURIComponent(selectedCategory)}`;
+    }
+    fetch(url)
+      .then(res => res.json())
+      .then(data => {
+        setRestaurants(
+          (data || []).map((r: any) => ({
+            id: r.restaurant_id ? r.restaurant_id.toString() : '', // Always use restaurant_id as string
+            name: r.restaurant_name ?? '',
+            cuisines: r.cuisine_type ? r.cuisine_type.split(',').map((c: string) => c.trim()) : [],
+            rating: r.avg_rating ?? '',
+            reviews: r.total_reviews ?? '',
+            deliveryTime: r.delivery_time_minutes ?? '',
+            deliveryFee: r.delivery_fee ?? '',
+            image: r.store_img ?? '',
+            isVeg: r.is_veg ?? false,
+            discount: r.discount ?? '',
+            fssaiLicense: r.fssai_license ?? '',
+            category: r.category ?? '',
+          }))
+        );
+        setLoading(false);
+      })
+      .catch((err) => {
+        setError('Failed to load restaurants');
+        setLoading(false);
+      });
+  }, [selectedCategory]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading restaurants...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gray-100 mb-4">
+            <i className="fas fa-inbox text-4xl text-gray-400"></i>
+          </div>
+          <h3 className="text-2xl font-bold text-gray-700 mb-2">{error}</h3>
+        </div>
+      </div>
+    );
+  }
 
   const filteredRestaurants = restaurants.filter(r => {
     const vegMatch = !localVegOnly || r.isVeg
-    const categoryMatch = !selectedCategory || r.category === selectedCategory
-    return vegMatch && categoryMatch
+    return vegMatch
   })
-  
+
   const sortedRestaurants = [...filteredRestaurants].sort((a, b) => {
     switch (sortBy) {
       case 'rating':
@@ -282,109 +262,144 @@ const RestaurantListPage = () => {
         <div className="max-w-7xl mx-auto px-4 md:px-6 py-10">
         {sortedRestaurants.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-7">
-            {sortedRestaurants.map((restaurant) => (
-              <Link
-                key={restaurant.id}
-                href={`/restaurant/${restaurant.id}`}
-                className="group block no-underline h-full"
-              >
-                <div className="h-full bg-white rounded-3xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 flex flex-col hover:-translate-y-4 border border-gray-200 hover:border-[#16c2a5]">
-                  {/* Image Section - Fixed Height with Better Badge Layout */}
-                  <div className="relative w-full h-56 overflow-hidden bg-gradient-to-br from-gray-200 to-gray-300 flex-shrink-0">
-                    <Image
-                      src={restaurant.image}
-                      alt={restaurant.name}
-                      fill
-                      priority={false}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-400"
-                    />
-                    
-                    {/* Top Badge Area */}
-                    <div className="absolute inset-0 top-0 pt-4 px-4 flex justify-between items-start pointer-events-none">
-                      {/* Left: Veg Badge */}
-                      {restaurant.isVeg && (
-                        <div className="bg-white px-3 py-1.5 rounded-full text-green-700 font-bold text-xs shadow-lg flex items-center gap-1.5 border border-green-300 pointer-events-auto">
-                          <div className="w-2.5 h-2.5 bg-green-700 rounded-full"></div>
-                          Pure Veg
+            {sortedRestaurants.map((restaurant) => {
+              // Determine open/closed status
+              const now = new Date();
+              let isOpen = true;
+              let nextOpenMsg = '';
+              if (restaurant.is_active === false) {
+                isOpen = false;
+              } else if (restaurant.opening_time && restaurant.closing_time) {
+                const [oh, om] = restaurant.opening_time.split(':').map(Number);
+                const [ch, cm] = restaurant.closing_time.split(':').map(Number);
+                const openTime = new Date(now); openTime.setHours(oh, om || 0, 0, 0);
+                const closeTime = new Date(now); closeTime.setHours(ch, cm || 0, 0, 0);
+                if (closeTime <= openTime) closeTime.setDate(closeTime.getDate() + 1); // overnight
+                if (now < openTime) {
+                  isOpen = false;
+                  nextOpenMsg = `Opens at ${restaurant.opening_time}`;
+                } else if (now > closeTime) {
+                  isOpen = false;
+                  nextOpenMsg = `Opens at ${restaurant.opening_time} (tomorrow)`;
+                }
+              }
+              return (
+                <Link
+                  key={restaurant.id}
+                  href={`/restaurant/${restaurant.id}`}
+                  className="group block no-underline h-full"
+                >
+                  <div className="h-full bg-white rounded-3xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 flex flex-col hover:-translate-y-4 border border-gray-200 hover:border-[#16c2a5]">
+                    {/* Image Section - Fixed Height with Better Badge Layout */}
+                    <div className="relative w-full h-56 overflow-hidden bg-gradient-to-br from-gray-200 to-gray-300 flex-shrink-0">
+                      <Image
+                        src={restaurant.image}
+                        alt={restaurant.name}
+                        fill
+                        priority={false}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-400"
+                      />
+                      {/* Top Badge Area */}
+                      <div className="absolute inset-0 top-0 pt-4 px-4 flex justify-between items-start pointer-events-none">
+                        {/* Left: Veg Badge */}
+                        {restaurant.isVeg && (
+                          <div className="bg-white px-3 py-1.5 rounded-full text-green-700 font-bold text-xs shadow-lg flex items-center gap-1.5 border border-green-300 pointer-events-auto">
+                            <div className="w-2.5 h-2.5 bg-green-700 rounded-full"></div>
+                            Pure Veg
+                          </div>
+                        )}
+                        {/* Open/Closed Badge */}
+                        <div className={`px-3 py-1.5 rounded-full font-bold text-xs shadow-lg flex items-center gap-1.5 pointer-events-auto border ${isOpen ? 'bg-green-500 text-white border-green-600' : 'bg-gray-300 text-gray-700 border-gray-400'}`}>
+                          <i className={`fas ${isOpen ? 'fa-door-open' : 'fa-door-closed'}`}></i>
+                          {isOpen ? 'Open' : 'Closed'}
                         </div>
-                      )}
-                      
-                      {/* Right: Discount Badge */}
-                      {restaurant.discount && (
-                        <div className="bg-gradient-to-r from-[#ff6b35] to-[#ff8451] text-white px-3 py-1.5 rounded-full font-bold text-xs shadow-lg flex items-center gap-1 pointer-events-auto">
-                          <i className="fas fa-fire text-white text-sm"></i>
-                          {restaurant.discount}% OFF
+                        {/* Right: Discount Badge */}
+                        {restaurant.discount && (
+                          <div className="bg-gradient-to-r from-[#ff6b35] to-[#ff8451] text-white px-3 py-1.5 rounded-full font-bold text-xs shadow-lg flex items-center gap-1 pointer-events-auto">
+                            <i className="fas fa-fire text-white text-sm"></i>
+                            {restaurant.discount}% OFF
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Bottom: Rating Badge */}
+                      <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-black/60 via-black/30 to-transparent flex items-end justify-start p-3">
+                        <div className="bg-gradient-to-r from-[#16c2a5] to-[#0fa589] text-white px-3 py-1.5 rounded-full font-bold text-xs flex items-center gap-1.5 shadow-lg">
+                          <i className="fas fa-star text-white text-sm"></i>
+                          <span>{restaurant.rating}</span>
+                        </div>
+                      </div>
+                      {/* Closed message overlay */}
+                      {!isOpen && nextOpenMsg && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/60 z-20">
+                          <div className="bg-white/90 text-gray-900 px-6 py-4 rounded-2xl shadow-xl text-center max-w-xs">
+                            <div className="font-bold text-lg mb-2">Currently Closed</div>
+                            <div className="text-sm">{nextOpenMsg}<br/>You can place an order once the restaurant opens.</div>
+                          </div>
                         </div>
                       )}
                     </div>
+                    {/* Content Section - More Spacious */}
+                    <div className="p-5 flex-1 flex flex-col justify-between">
+                      {/* Header with name and cuisine */}
+                      <div className="mb-4">
+                        <h3 className="font-black text-base text-[#1A1A2E] group-hover:text-[#16c2a5] transition-colors line-clamp-2 mb-2">
+                          {restaurant.name}
+                        </h3>
+                        <p className="text-xs text-gray-600 line-clamp-1 font-medium">
+                          {restaurant.cuisines.join(', ')}
+                        </p>
+                      </div>
 
-                    {/* Bottom: Rating Badge */}
-                    <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-black/60 via-black/30 to-transparent flex items-end justify-start p-3">
-                      <div className="bg-gradient-to-r from-[#16c2a5] to-[#0fa589] text-white px-3 py-1.5 rounded-full font-bold text-xs flex items-center gap-1.5 shadow-lg">
-                        <i className="fas fa-star text-white text-sm"></i>
-                        <span>{restaurant.rating}</span>
+                      {/* Reviews Count */}
+                      <div className="mb-4 pb-4 border-b border-gray-150">
+                        <p className="text-xs text-gray-700 font-semibold flex items-center gap-2">
+                          <span className="text-[#ff6b35] text-sm">★</span>
+                          <span className="text-[#1A1A2E] font-bold">{restaurant.reviews?.toLocaleString?.() ?? restaurant.reviews}</span>
+                          <span className="text-gray-500">ratings</span>
+                        </p>
+                      </div>
+
+                      {/* FSSAI License - Trust Builder */}
+                      {restaurant.fssaiLicense && (
+                        <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-2xl p-3 mb-4">
+                          <div className="text-green-700 font-black text-xs flex items-center gap-2">
+                            <i className="fas fa-certificate text-green-600 text-sm"></i>
+                            <span>FSSAI Verified</span>
+                          </div>
+                          <p className="text-green-700 font-mono text-[8px] mt-1.5 truncate">{restaurant.fssaiLicense}</p>
+                        </div>
+                      )}
+
+                      {/* Delivery Info - Bottom Section */}
+                      <div className="flex items-center justify-between gap-3 pt-4 border-t border-gray-200">
+                        {/* Delivery Time */}
+                        <div className="flex items-center gap-2 flex-1">
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#16c2a5] to-[#0fa589] flex items-center justify-center flex-shrink-0">
+                            <i className="fas fa-clock text-white text-xs"></i>
+                          </div>
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-xs font-black text-[#1A1A2E]">{restaurant.deliveryTime}m</span>
+                            <span className="text-[8px] text-gray-500">Delivery</span>
+                          </div>
+                        </div>
+
+                        {/* Delivery Fee */}
+                        <div className="flex items-center gap-2 flex-1">
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#ff6b35] to-[#ff8451] flex items-center justify-center flex-shrink-0">
+                            <i className="fas fa-rupee-sign text-white text-xs"></i>
+                          </div>
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-xs font-black text-[#1A1A2E]">₹{restaurant.deliveryFee}</span>
+                            <span className="text-[8px] text-gray-500">Fee</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
-
-                  {/* Content Section - More Spacious */}
-                  <div className="p-5 flex-1 flex flex-col justify-between">
-                    {/* Header with name and cuisine */}
-                    <div className="mb-4">
-                      <h3 className="font-black text-base text-[#1A1A2E] group-hover:text-[#16c2a5] transition-colors line-clamp-2 mb-2">
-                        {restaurant.name}
-                      </h3>
-                      <p className="text-xs text-gray-600 line-clamp-1 font-medium">
-                        {restaurant.cuisines.join(', ')}
-                      </p>
-                    </div>
-
-                    {/* Reviews Count */}
-                    <div className="mb-4 pb-4 border-b border-gray-150">
-                      <p className="text-xs text-gray-700 font-semibold flex items-center gap-2">
-                        <span className="text-[#ff6b35] text-sm">★</span>
-                        <span className="text-[#1A1A2E] font-bold">{restaurant.reviews.toLocaleString()}</span>
-                        <span className="text-gray-500">ratings</span>
-                      </p>
-                    </div>
-
-                    {/* FSSAI License - Trust Builder */}
-                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-2xl p-3 mb-4">
-                      <div className="text-green-700 font-black text-xs flex items-center gap-2">
-                        <i className="fas fa-certificate text-green-600 text-sm"></i>
-                        <span>FSSAI Verified</span>
-                      </div>
-                      <p className="text-green-700 font-mono text-[8px] mt-1.5 truncate">{restaurant.fssaiLicense}</p>
-                    </div>
-
-                    {/* Delivery Info - Bottom Section */}
-                    <div className="flex items-center justify-between gap-3 pt-4 border-t border-gray-200">
-                      {/* Delivery Time */}
-                      <div className="flex items-center gap-2 flex-1">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#16c2a5] to-[#0fa589] flex items-center justify-center flex-shrink-0">
-                          <i className="fas fa-clock text-white text-xs"></i>
-                        </div>
-                        <div className="flex flex-col min-w-0">
-                          <span className="text-xs font-black text-[#1A1A2E]">{restaurant.deliveryTime}m</span>
-                          <span className="text-[8px] text-gray-500">Delivery</span>
-                        </div>
-                      </div>
-
-                      {/* Delivery Fee */}
-                      <div className="flex items-center gap-2 flex-1">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#ff6b35] to-[#ff8451] flex items-center justify-center flex-shrink-0">
-                          <i className="fas fa-rupee-sign text-white text-xs"></i>
-                        </div>
-                        <div className="flex flex-col min-w-0">
-                          <span className="text-xs font-black text-[#1A1A2E]">₹{restaurant.deliveryFee}</span>
-                          <span className="text-[8px] text-gray-500">Fee</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              );
+            })}
           </div>
         ) : (
           <div className="text-center py-16">

@@ -17,11 +17,10 @@ export default function RegisterPage() {
       <header className="bg-[#0a1929] sticky top-0 z-[1000] py-4 px-6 shadow-lg backdrop-blur-[10px] bg-[rgba(10,25,41,0.95)]">
         <div className="max-w-[1180px] mx-auto flex justify-between items-center">
           <Link href="/" className="flex items-center gap-3 no-underline">
-            <div className="w-10 h-10 bg-gradient-to-br from-[#6c63ff] to-[#5752d4] rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg">
-              G
-            </div>
-            <div className="text-3xl font-bold bg-gradient-to-br from-[#6c63ff] to-[#ff6584] bg-clip-text text-transparent">
-              GatiMitra
+            <img src="/img/logo.png" alt="GatiMitra Logo" className="w-10 h-10 object-contain" />
+            <div className="flex items-center gap-0.5">
+              <span className="text-3xl font-bold text-[#16c2a5]">Gati</span>
+              <span className="text-3xl font-bold text-[#ff6b35]">Mitra</span>
             </div>
           </Link>
           <nav className="flex gap-6 items-center">

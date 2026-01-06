@@ -125,7 +125,7 @@ export default function AboutPage() {
             <div className="text-4xl mb-4">🎯</div>
             <h2 className="text-3xl font-black text-text mb-4">Our Vision</h2>
             <p className="text-text-light leading-relaxed">
-              To become India's most trusted hyperlocal platform by enabling faster movement of people, 
+              To become India&apos;s most trusted hyperlocal platform by enabling faster movement of people, 
               goods, and services—while uplifting local communities through technology.
             </p>
           </div>
@@ -312,7 +312,7 @@ export default function AboutPage() {
             }}
           >
             <p className="text-lg text-text-light leading-relaxed">
-              GatiMitra is more than a delivery platform—it's a growth engine for local India.
+              GatiMitra is more than a delivery platform—it&apos;s a growth engine for local India.
               We help small businesses expand digitally, provide flexible income opportunities to riders, 
               and ensure customers get reliable services from trusted local partners.
             </p>
@@ -351,7 +351,7 @@ export default function AboutPage() {
       <section className="py-16 px-4 md:px-8 pb-24">
         <div className="max-w-4xl mx-auto">
           <h2 className="text-4xl font-black text-center text-text mb-8">
-            What's Next for GatiMitra
+            What&apos;s Next for GatiMitra
           </h2>
           <div
             className="rounded-[24px] p-8"

@@ -47,6 +47,7 @@ export default function OrderPage() {
     updateItemQuantity(itemId, quantity)
   }
 
+
   if (selectedRestaurantId) {
     return (
       <>
