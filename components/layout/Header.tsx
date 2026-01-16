@@ -910,7 +910,7 @@ export default function Header() {
         }
         
         .hero-title-accent {
-          background: linear-gradient(135deg, #000008 0%, #ac4103 100%);
+          background: linear-gradient(135deg, #0a0600 0%, #ff0400 100%);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
           background-clip: text;
