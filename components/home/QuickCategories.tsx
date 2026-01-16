@@ -66,100 +66,117 @@ export default function QuickCategories() {
     {
       tag: 'Food Delivery',
       title: 'Order Your Meal',
-      image: 'https://cdn-icons-png.flaticon.com/512/706/706164.png',
+      image: '/img/food.png', // Real food icon
       href: '/order',
       service: 'food' as ServiceCategory,
+      iconBg: 'from-[#FF6B35]/20 to-[#FF6B35]/10',
+      borderColor: 'rgba(255, 107, 53, 0.3)',
+      gradient: 'from-[#FF6B35] to-[#FF9500]',
     },
     {
       tag: 'Book a Ride',
       title: 'Request a Ride',
-      image: 'https://cdn-icons-png.flaticon.com/512/854/854878.png',
+      image: '/img/ridecard.png', // Custom taxi icon (place the provided image in public/img/taxi-icon.png)
       href: '/ride',
-      service: 'person' as ServiceCategory, // RidePage uses 'person' category
+      service: 'person' as ServiceCategory,
+      iconBg: 'from-[#4b2ad4]/20 to-[#4b2ad4]/10',
+      borderColor: 'rgba(75, 42, 212, 0.3)',
+      gradient: 'from-[#4b2ad4] to-[#7E69AB]',
     },
     {
       tag: 'Courier Service',
       title: 'Send Parcels',
-      image: 'https://cdn-icons-png.flaticon.com/512/679/679922.png',
+      image: '/img/parcelcard.png', // Real package icon
       href: '/courier#parcel-form',
-      service: 'parcel' as ServiceCategory, // CourierPage uses 'parcel' category
+      service: 'parcel' as ServiceCategory,
+      iconBg: 'from-[#16c2a5]/20 to-[#16c2a5]/10',
+      borderColor: 'rgba(22, 194, 165, 0.3)',
+      gradient: 'from-[#16c2a5] to-[#2DCCCD]',
     },
     {
       tag: 'Deals & Offers',
       title: 'Online Vouchers',
-      image: 'https://cdn-icons-png.flaticon.com/512/891/891419.png',
+      image: '/img/voucher.png', // Real discount icon
       href: '#',
       onClick: () => setShowVoucherPopup(true),
+      iconBg: 'from-[#FF4081]/20 to-[#FF4081]/10',
+      borderColor: 'rgba(255, 64, 129, 0.3)',
+      gradient: 'from-[#FF4081] to-[#FF6EC7]',
     },
     {
       tag: 'Explore Nearby',
       title: 'Near Me',
-      image: 'https://cdn-icons-png.flaticon.com/512/684/684908.png',
+      image: '/img/loc.png', // Real location icon
       href: '#',
+      iconBg: 'from-[#9C27B0]/20 to-[#9C27B0]/10',
+      borderColor: 'rgba(156, 39, 176, 0.3)',
+      gradient: 'from-[#9C27B0] to-[#E040FB]',
     },
   ]
 
   return (
     <>
-      <section className="mt-[-100px] pb-[70px] relative z-20">
-        <div className="flex justify-center gap-3 flex-wrap max-w-[1000px] mx-auto px-4">
+      <section className="px-5 md:px-8 py-8 relative overflow-visible z-30 -mt-[109px]" style={{ pointerEvents: 'auto' }}>
+       {/* Categories grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 max-w-[1200px] mx-auto px-4 drop-shadow-2xl" style={{zIndex: 30, gridAutoRows: '1fr'}}>
           {categories.map((category, index) => {
+            // Create card content
             const cardContent = (
-              <div 
-                className="w-[150px] h-[160px] rounded-[16px] text-center cursor-pointer relative overflow-hidden group hover:-translate-y-[4px] transition-all duration-300"
-                style={{ 
-                  background: 'rgba(255, 255, 255, 0.75)',
-                  backdropFilter: 'blur(24px)',
-                  WebkitBackdropFilter: 'blur(24px)',
-                  border: '1px solid rgba(255, 255, 255, 0.7)',
-                  boxShadow: '0 6px 24px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.9), inset 0 -1px 0 rgba(0, 0, 0, 0.05)',
+              <div
+                className="w-[211px] h-[135px] rounded-[15px] cursor-pointer relative overflow-hidden group hover:-translate-y-[6px] transition-all duration-300 flex flex-col justify-between bg-[#ffffff] border"
+                style={{
+                  border: `1px solid ${category.borderColor}`,
+                  boxShadow: '0 8px 32px rgba(7, 0, 0, 0.08), inset 0 1px 0 rgba(108, 107, 107, 0.9), inset 0 -1px 0 rgba(0, 0, 0, 0.05)',
+                  backdropFilter: 'blur(18px)',
+                  WebkitBackdropFilter: 'blur(18px)'
                 }}
               >
-                  {/* Top gradient accent */}
-                  <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-[#16c2a5] via-[#4b2ad4] to-[#ff6b35] opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                  
-                  {/* Content */}
-                  <div className="flex flex-col items-center justify-center h-full px-3 py-4">
-                    {/* Tag with leaf icon effect */}
-                    <div className="relative mb-2">
-                      <div className="bg-gradient-to-br from-[rgba(22,194,165,0.15)] to-[rgba(75,42,212,0.1)] text-purple text-[9px] rounded-[8px] font-bold px-2 py-0.5 inline-block tracking-wide border border-[rgba(22,194,165,0.2)]" style={{ letterSpacing: '0.2px' }}>
-                        {category.tag}
-                      </div>
-                    </div>
-                    
-                    {/* Title */}
-                    <h3 className="text-[14px] font-bold mb-2 text-text leading-tight px-1">{category.title}</h3>
-                    
-                    {/* Image */}
-                    <div className="flex-1 flex items-center justify-center">
-                      <img
-                        src={category.image}
-                        alt={category.title}
-                        className="w-[55px] h-[55px] object-contain transition-transform duration-300 group-hover:scale-110"
-                        style={{ filter: 'drop-shadow(0 3px 10px rgba(0,0,0,0.1))' }}
-                      />
-                    </div>
+                {/* Card image at top-right */}
+                <div className="absolute top-3 right-3 z-10">
+                  <div className="w-[72px] h-[72px] flex items-center justify-center group-hover:scale-105 transition-transform duration-300">
+                    <img
+                      src={category.image}
+                      alt={category.title}
+                      className="w-[98px] h-[98px] object-contain drop-shadow-xxxl"
+                    />
                   </div>
-                  
-                  {/* Hover glow effect */}
+                </div>
+                {/* Card text at bottom-left */}
+                <div className="absolute left-3 bottom-3 z-20 text-left">
+                  <h3 className="text-[15px] font-bold mb-1 text-gray-800 leading-tight px-1 drop-shadow-sm">
+                    {category.title}
+                  </h3>
                   <div 
-                    className="absolute inset-0 rounded-[16px] opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+                    className="text-[10px] rounded-[10px] font-semibold px-3 py-1 inline-block tracking-wide border mt-1"
                     style={{
-                      background: 'radial-gradient(circle at center, rgba(22,194,165,0.06), transparent 70%)',
-                      boxShadow: 'inset 0 0 40px rgba(22,194,165,0.05)'
+                      background: `linear-gradient(135deg, ${category.iconBg})`,
+                      borderColor: category.borderColor,
+                      color: '#4B5563',
+                      letterSpacing: '0.3px'
                     }}
-                  ></div>
-                  
-                  {/* Shine effect on hover */}
-                  <div 
-                    className="absolute inset-0 rounded-[16px] opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-                    style={{
-                      background: 'linear-gradient(135deg, rgba(255,255,255,0.3) 0%, transparent 50%)',
-                    }}
-                  ></div>
+                  >
+                    {category.tag}
+                  </div>
+                </div>
+                {/* Hover glow effect */}
+                <div 
+                  className="absolute inset-0 rounded-[20px] opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+                  style={{
+                    background: `radial-gradient(circle at 80% 20%, ${category.iconBg.split(' ')[0]} 0%, transparent 70%)`,
+                    boxShadow: `inset 0 0 40px ${category.iconBg.split(' ')[0].replace('/20', '/10')}`
+                  }}
+                ></div>
+                {/* Shine effect on hover */}
+                <div 
+                  className="absolute inset-0 rounded-[20px] opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(255,255,255,0.4) 0%, transparent 50%)',
+                  }}
+                ></div>
               </div>
             )
 
+            // Return different wrapper based on category type
             if (category.onClick) {
               return (
                 <div 
@@ -185,8 +202,9 @@ export default function QuickCategories() {
               )
             }
 
+            // For regular links (without service switching)
             return (
-              <Link key={index} href={category.href || '/'}>
+              <Link key={index} href={category.href || '/'} className="block">
                 {cardContent}
               </Link>
             )
@@ -228,4 +246,3 @@ export default function QuickCategories() {
     </>
   )
 }
-
