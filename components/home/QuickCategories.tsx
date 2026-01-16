@@ -116,7 +116,7 @@ export default function QuickCategories() {
 
   return (
     <>
-      <section className="px-5 md:px-8 py-8 relative overflow-visible z-30 -mt-[109px]" style={{ pointerEvents: 'auto' }}>
+      <section className="px-5 md:px-8 py-8 relative overflow-visible z-30 -mt-[100px]" style={{ pointerEvents: 'auto' }}>
        {/* Categories grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 max-w-[1200px] mx-auto px-4 drop-shadow-2xl" style={{zIndex: 30, gridAutoRows: '1fr'}}>
           {categories.map((category, index) => {

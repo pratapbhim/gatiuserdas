@@ -15,6 +15,17 @@ export default function Header() {
     const [restaurantList, setRestaurantList] = useState<any[]>([])
     const searchRef = useRef<HTMLDivElement>(null)
 
+    // Location states
+    const [location, setLocation] = useState('📍 Detecting location...')
+    const [isLocationManual, setIsLocationManual] = useState(false)
+    const [showLocationModal, setShowLocationModal] = useState(false)
+    const [locationInput, setLocationInput] = useState('')
+    const [isLocationLoading, setIsLocationLoading] = useState(true)
+    const [showLocationInput, setShowLocationInput] = useState(false)
+    const [locationSuggestions, setLocationSuggestions] = useState<any[]>([]);
+    const [isLocationInputFocused, setIsLocationInputFocused] = useState(false);
+    const locationInputRef = useRef<HTMLInputElement>(null)
+
     // Fetch restaurant list on mount
     useEffect(() => {
       fetch('/api/restaurants')
@@ -22,6 +33,94 @@ export default function Header() {
         .then(data => setRestaurantList(data || []))
         .catch(() => setRestaurantList([]));
     }, []);
+
+    // Get user's location on mount
+    useEffect(() => {
+      getLocation();
+    }, []);
+
+    // Get user's current location
+    const getLocation = () => {
+      setIsLocationLoading(true);
+      if (!navigator.geolocation) {
+        setLocation('📍 Location not supported');
+        setIsLocationLoading(false);
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          try {
+            const { latitude, longitude } = position.coords;
+            // Reverse geocoding to get address
+            const response = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
+            );
+            const data = await response.json();
+            if (data.address) {
+              const { city, town, village, suburb, county, state, neighbourhood, hamlet, road, residential } = data.address;
+              // Compose area and city string
+              const area = neighbourhood || suburb || hamlet || road || residential || '';
+              const cityName = city || town || village || county || state || '';
+              let locationDisplay = '';
+              if (cityName && area) {
+                locationDisplay = `📍 ${cityName}, ${area}`;
+              } else if (cityName) {
+                locationDisplay = `📍 ${cityName}`;
+              } else if (area) {
+                locationDisplay = `📍 ${area}`;
+              } else {
+                locationDisplay = `📍 Your Location`;
+              }
+              setLocation(locationDisplay);
+            } else {
+              setLocation(`📍 ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+            }
+            setIsLocationManual(false);
+          } catch (error) {
+            setLocation('📍 Your Location');
+          } finally {
+            setIsLocationLoading(false);
+          }
+        },
+        (error) => {
+          console.error('Error getting location:', error);
+          if (error.code === 1) {
+            setShowLocationModal(true);
+            setLocation('📍 Location access denied');
+          } else {
+            setLocation('📍 Unable to detect location');
+          }
+          setIsLocationLoading(false);
+        }
+      );
+    };
+
+    // Manual location entry handler
+    const handleManualLocation = (suggestion?: any) => {
+      let value = locationInput.trim();
+      if (suggestion) {
+        value = suggestion.display_name;
+      }
+      if (value) {
+        setLocation(`📍 ${value}`);
+        setIsLocationManual(true);
+        setShowLocationInput(false);
+        setLocationInput('');
+        setLocationSuggestions([]);
+      }
+    };
+
+    // Fetch area suggestions as user types
+    useEffect(() => {
+      if (showLocationInput && locationInput.trim().length > 1) {
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationInput.trim())}`)
+          .then(res => res.json())
+          .then(data => setLocationSuggestions(data || []))
+          .catch(() => setLocationSuggestions([]));
+      } else {
+        setLocationSuggestions([]);
+      }
+    }, [locationInput, showLocationInput]);
 
     // Search handler
     const handleLandingSearchInput = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -52,6 +151,7 @@ export default function Header() {
       const handleClickOutside = (e: MouseEvent) => {
         if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
           setShowSearchResults(false)
+          setShowLocationInput(false)
         }
       }
 
@@ -137,15 +237,22 @@ export default function Header() {
     }
   }, [isBusinessDropdownOpen, isMobileMenuOpen])
 
+  // Focus location input when shown
+  useEffect(() => {
+    if (showLocationInput && locationInputRef.current) {
+      locationInputRef.current.focus();
+    }
+  }, [showLocationInput]);
+
   return (
     <>
       <div className="relative">
-        {/* Main header with fixed gradient background */}
+        {/* Main header with fixed gradient background - Updated gradient */}
         <div className="absolute inset-0 rounded-b-[90px] overflow-hidden z-0">
           <div 
             className="absolute inset-0"
             style={{ 
-              background: 'linear-gradient(135deg, rgba(22, 194, 165, 0.92), rgba(75, 42, 212, 0.95)), url("/img/bg.png") center/cover no-repeat'
+             background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.60), rgba(59, 130, 246, 0.55), rgba(168, 85, 247, 0.45)), url("/img/bg.png") center/cover no-repeat'
             }}
           ></div>
           {/* Pattern overlay */}
@@ -298,7 +405,7 @@ export default function Header() {
                       href="/register" 
                       onClick={() => setIsMobileMenuOpen(false)}
                       className="block px-5 py-3 text-gray-700 no-underline font-medium text-[15px] transition-all hover:bg-gradient-to-r hover:from-[rgba(22,194,165,0.08)] hover:to-[rgba(75,42,212,0.05)] hover:text-purple"
-                    >
+                      >
                       <i className="fas fa-store mr-3 text-[14px] text-purple"></i> Register as Merchant
                     </Link>
                     <Link 
@@ -410,52 +517,137 @@ export default function Header() {
               Food • Parcel • Person Delivery
             </p>
 
-            {/* Search Box */}
+            {/* Parallel Location & Search Bar */}
             <div className="relative max-w-[800px] mx-auto" ref={searchRef}>
-              <div className="search-box search-box-responsive">
-                {/* Location input */}
-                <input
-                  className="location-input location-input-responsive"
-                  placeholder="📍 Detecting location…"
-                  readOnly
-                />
-                {/* Search input with typing animation and logic */}
-                <div className="relative w-full">
+              <div className="flex flex-row gap-3 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden h-[60px] transition-all duration-300 hover:shadow-3xl items-center px-4 py-2 flex-wrap md:flex-nowrap">
+                {/* Location detector */}
+                <div className="flex items-center min-w-[180px] max-w-[260px] flex-shrink-0">
+                  <span className="text-gray-500 text-sm mr-2 whitespace-nowrap overflow-hidden text-ellipsis">
+                    {isLocationLoading ? (
+                      <span className="flex items-center">
+                        <span className="animate-spin rounded-full h-3 w-3 border-b-2 border-purple mr-2"></span>
+                        Detecting...
+                      </span>
+                    ) : (
+                      showLocationInput && locationInput ? `📍 ${locationInput}` : location
+                    )}
+                  </span>
+                  {isLocationManual && !showLocationInput && (
+                    <span className="text-xs bg-purple-light text-purple px-2 py-0.5 rounded-full ml-2">
+                      Manual
+                    </span>
+                  )}
+                  <button
+                    onClick={getLocation}
+                    className="text-xs text-purple hover:text-purple-dark font-medium px-2 py-1 rounded hover:bg-purple-light transition-colors flex items-center gap-1 ml-2"
+                    title="Refresh location"
+                  >
+                    <i className="fas fa-sync-alt text-[10px]"></i>
+                  </button>
+                  <button
+                    onClick={() => setShowLocationInput(!showLocationInput)}
+                    className="text-xs text-gray-600 hover:text-purple font-medium px-2 py-1 rounded hover:bg-gray-100 transition-colors flex items-center gap-1 ml-1"
+                    title="Enter location manually"
+                  >
+                    <i className="fas fa-edit text-[10px]"></i>
+                  </button>
+                </div>
+                {/* Search input */}
+                <div className="flex items-center flex-1 min-w-[180px] ml-2">
+                  <i className="fas fa-search text-gray-400 mr-3 text-sm"></i>
                   <input
                     type="text"
                     placeholder={searchPlaceholder}
-                    className="search-input search-input-responsive"
+                    className="flex-1 text-sm text-gray-800 placeholder-gray-400 focus:outline-none bg-transparent"
                     value={searchQuery}
                     onChange={handleLandingSearchInput}
                     onFocus={() => searchQuery.trim() && setShowSearchResults(true)}
-                    style={{width:'100%'}}
                   />
+                  {searchQuery && (
+                    <button
+                      onClick={() => {
+                        setSearchQuery('');
+                        setShowSearchResults(false);
+                      }}
+                      className="text-gray-400 hover:text-gray-600 ml-2"
+                    >
+                      <i className="fas fa-times"></i>
+                    </button>
+                  )}
                 </div>
               </div>
+              {/* Manual location input (below bar, left aligned) */}
+              {showLocationInput && (
+                <div className="flex flex-col items-start gap-1 bg-blue-50 border border-blue-100 rounded-lg px-2 py-2 animate-slideDown mt-2 max-w-[400px] mx-0">
+                  <div className="flex w-full gap-2">
+                    <input
+                      ref={locationInputRef}
+                      type="text"
+                      value={locationInput}
+                      onChange={(e) => setLocationInput(e.target.value)}
+                      placeholder="Enter your city, area, or landmark"
+                      className="flex-1 text-sm px-3 py-1 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple focus:border-transparent min-w-[120px]"
+                      onKeyPress={(e) => e.key === 'Enter' && handleManualLocation()}
+                      onFocus={() => setIsLocationInputFocused(true)}
+                      onBlur={() => setTimeout(() => setIsLocationInputFocused(false), 200)}
+                    />
+                    <button
+                      onClick={() => handleManualLocation()}
+                      className="bg-purple text-white px-3 py-1 rounded-lg text-sm font-medium hover:bg-purple-dark transition-colors"
+                    >
+                      Set
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowLocationInput(false);
+                        setLocationInput('');
+                        setLocationSuggestions([]);
+                      }}
+                      className="text-gray-500 hover:text-gray-700 px-2"
+                    >
+                      ×
+                    </button>
+                  </div>
+                  {/* Suggestions dropdown */}
+                  {(locationSuggestions.length > 0 && (isLocationInputFocused || locationInput)) && (
+                    <div className="w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1 z-50 max-h-56 overflow-y-auto">
+                      {locationSuggestions.map((suggestion, idx) => (
+                        <div
+                          key={idx}
+                          className="px-3 py-2 text-sm text-gray-700 hover:bg-purple-light cursor-pointer transition-colors"
+                          onClick={() => handleManualLocation(suggestion)}
+                        >
+                          {suggestion.display_name}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </header>
 
-        {/* Search Results Container - Positioned below header */}
+        {/* Search Results Container - Positioned 10px below search bar */}
         {showSearchResults && searchQuery && (
-          <div className="absolute left-1/2 transform -translate-x-1/2 w-full max-w-[800px] z-50" style={{ top: 'calc(100% - 40px)' }}>
-            <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
+          <div className="absolute left-1/2 transform -translate-x-1/2 w-full max-w-[600px] z-50" style={{ top: 'calc(100% - 20px)' }}>
+            <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden mt-2">
               {searchLoading && (
-                <div className="px-6 py-8 text-center">
+                <div className="px-6 py-6 text-center">
                   <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-purple mb-4"></div>
                   <div className="text-gray-500">Searching for "{searchQuery}"...</div>
                 </div>
               )}
               {!searchLoading && searchResults.length > 0 && (
                 <div className="max-h-[400px] overflow-y-auto">
-                  <div className="px-6 py-4 bg-gradient-to-r from-purple-light to-blue-50 border-b border-gray-200">
+                  <div className="px-4 py-3 bg-gradient-to-r from-purple-light to-blue-50 border-b border-gray-200">
                     <div className="flex justify-between items-center">
-                      <h3 className="font-bold text-text text-lg">Search Results</h3>
-                      <span className="text-sm text-gray-600 bg-white px-3 py-1 rounded-full font-medium">
-                        {searchResults.length} results found
+                      <h3 className="font-bold text-text text-sm">Search Results</h3>
+                      <span className="text-xs text-gray-600 bg-white px-2 py-1 rounded-full font-medium">
+                        {searchResults.length} found
                       </span>
                     </div>
-                    <div className="text-sm text-gray-500 mt-1">Showing results for "{searchQuery}"</div>
+                    <div className="text-xs text-gray-500 mt-0.5">Showing results for "{searchQuery}"</div>
                   </div>
                   {searchResults.map((item, idx) => {
                     const restaurant = restaurantList.find(r => r.restaurant_id === item.restaurant_id || r.id === item.restaurant_id);
@@ -463,10 +655,10 @@ export default function Header() {
                     return (
                       <div
                         key={idx}
-                        className="flex items-center gap-4 px-6 py-4 hover:bg-purple-light/30 cursor-pointer transition-colors border-b border-gray-100 last:border-b-0 group"
+                        className="flex items-center gap-3 px-4 py-3 hover:bg-purple-light/30 cursor-pointer transition-colors border-b border-gray-100 last:border-b-0 group"
                       >
                         <div className="flex-shrink-0">
-                          <div className="w-14 h-14 rounded-xl overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
+                          <div className="w-12 h-12 rounded-lg overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center shadow-sm group-hover:shadow transition-shadow">
                             {item.image_url ? (
                               <img
                                 src={item.image_url}
@@ -474,41 +666,41 @@ export default function Header() {
                                 className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                               />
                             ) : (
-                              <div className="text-2xl text-gray-400">🍽️</div>
+                              <div className="text-xl text-gray-400">🍽️</div>
                             )}
                           </div>
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2">
                             <div>
-                              <h4 className="font-bold text-text text-base truncate group-hover:text-purple transition-colors">
+                              <h4 className="font-bold text-text text-sm truncate group-hover:text-purple transition-colors">
                                 {item.item_name}
                               </h4>
-                              <div className="flex items-center gap-2 mt-1">
-                                <span className="text-purple font-semibold text-sm cursor-pointer hover:text-purple-dark hover:underline transition-all">
+                              <div className="flex items-center gap-1.5 mt-0.5">
+                                <span className="text-purple font-semibold text-xs cursor-pointer hover:text-purple-dark hover:underline transition-all">
                                   {restaurantName}
                                 </span>
                                 {item.category && (
-                                  <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full font-medium">
+                                  <span className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-full font-medium">
                                     {item.category}
                                   </span>
                                 )}
                               </div>
                             </div>
                             {item.price && (
-                              <div className="text-green-600 font-bold text-lg whitespace-nowrap">
+                              <div className="text-green-600 font-bold text-base whitespace-nowrap">
                                 ₹{item.price}
                               </div>
                             )}
                           </div>
-                          <div className="flex items-center gap-4 mt-2">
+                          <div className="flex items-center gap-3 mt-1.5">
                             {item.category_item && (
-                              <span className="text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded">
+                              <span className="text-xs text-gray-500 bg-gray-50 px-1.5 py-0.5 rounded">
                                 {item.category_item}
                               </span>
                             )}
                             {typeof item.score !== 'undefined' && (
-                              <span className={`text-xs font-bold px-2 py-1 rounded-full ${
+                              <span className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${
                                 item.score === 100 
                                   ? 'bg-green-100 text-green-700' 
                                   : item.score >= 80
@@ -520,15 +712,15 @@ export default function Header() {
                             )}
                             {item.delivery_time && (
                               <span className="text-xs text-gray-500 flex items-center gap-1">
-                                <i className="fas fa-clock text-xs"></i>
+                                <i className="fas fa-clock text-[10px]"></i>
                                 {item.delivery_time} min
                               </span>
                             )}
                           </div>
                         </div>
                         <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button className="bg-gradient-to-r from-purple to-[#6a3aff] text-white px-4 py-2 rounded-lg text-sm font-semibold hover:shadow-md transition-shadow">
-                            Order Now
+                          <button className="bg-gradient-to-r from-purple to-[#6a3aff] text-white px-3 py-1.5 rounded-lg text-xs font-semibold hover:shadow transition-shadow">
+                            Order
                           </button>
                         </div>
                       </div>
@@ -537,15 +729,15 @@ export default function Header() {
                 </div>
               )}
               {!searchLoading && searchResults.length === 0 && searchQuery && (
-                <div className="px-6 py-12 text-center">
-                  <div className="text-5xl mb-4 text-gray-300">🔍</div>
-                  <div className="text-gray-600 font-semibold text-lg mb-2">No results found for "{searchQuery}"</div>
-                  <div className="text-gray-400 text-sm max-w-md mx-auto">
-                    Try different keywords, check spelling, or browse categories
+                <div className="px-6 py-8 text-center">
+                  <div className="text-4xl mb-3 text-gray-300">🔍</div>
+                  <div className="text-gray-600 font-semibold text-sm mb-1">No results found for "{searchQuery}"</div>
+                  <div className="text-gray-400 text-xs max-w-xs mx-auto">
+                    Try different keywords or check spelling
                   </div>
                   <button 
                     onClick={() => setShowSearchResults(false)}
-                    className="mt-4 text-purple font-medium text-sm hover:underline"
+                    className="mt-3 text-purple font-medium text-xs hover:underline"
                   >
                     Clear search
                   </button>
@@ -556,8 +748,197 @@ export default function Header() {
         )}
       </div>
 
+      {/* Location Permission Modal */}
+      {showLocationModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full animate-scaleIn">
+            <div className="px-6 py-5 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-bold text-text">Enable Location Access</h3>
+                <button
+                  onClick={() => setShowLocationModal(false)}
+                  className="text-gray-400 hover:text-gray-600 text-xl"
+                >
+                  ×
+                </button>
+              </div>
+              <p className="text-gray-600 text-sm mt-1">
+                Location access is required for better delivery experience
+              </p>
+            </div>
+            
+            <div className="px-6 py-5">
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="bg-purple-light text-purple w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
+                    1
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-text text-sm">Click the lock icon</h4>
+                    <p className="text-gray-500 text-xs mt-0.5">
+                      In your browser&apos;s address bar, click the lock or info icon
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-3">
+                  <div className="bg-purple-light text-purple w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
+                    2
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-text text-sm">Open Site Settings</h4>
+                    <p className="text-gray-500 text-xs mt-0.5">
+                      Click on &quot;Site settings&quot; or &quot;Permissions&quot;
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-3">
+                  <div className="bg-purple-light text-purple w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
+                    3
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-text text-sm">Allow Location Access</h4>
+                    <p className="text-gray-500 text-xs mt-0.5">
+                      Change location permission from &quot;Block&quot; to &quot;Allow&quot;
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-3">
+                  <div className="bg-purple-light text-purple w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
+                    4
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-text text-sm">Refresh the Page</h4>
+                    <p className="text-gray-500 text-xs mt-0.5">
+                      Refresh this page after changing the settings
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-6 pt-5 border-t border-gray-200">
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowLocationModal(false)}
+                    className="flex-1 border border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg font-medium text-sm hover:bg-gray-50 transition-colors"
+                  >
+                    Enter Location Manually
+                  </button>
+                  <button
+                    onClick={() => {
+                      getLocation();
+                      setShowLocationModal(false);
+                    }}
+                    className="flex-1 bg-gradient-to-r from-purple to-[#6a3aff] text-white px-4 py-2.5 rounded-lg font-medium text-sm hover:shadow-lg transition-all"
+                  >
+                    Try Again
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
       <UserProfileModal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} />
+
+      <style jsx>{`
+        .search-box-responsive {
+          height: 60px !important;
+          min-height: 60px;
+        }
+        
+        .search-input-responsive {
+          height: 100%;
+          padding: 0 16px;
+          font-size: 14px;
+        }
+        
+        .location-input-responsive {
+          height: 100%;
+          padding: 0 16px;
+          font-size: 13px;
+        }
+        
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        .animate-slideDown {
+          animation: slideDown 0.2s ease-out;
+        }
+        
+        @keyframes scaleIn {
+          from {
+            opacity: 0;
+            transform: scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+        
+        .animate-scaleIn {
+          animation: scaleIn 0.2s ease-out;
+        }
+        
+        .shadow-3xl {
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(99, 102, 241, 0.1);
+        }
+        
+        .hero-title {
+          font-size: 2.5rem;
+          font-weight: 800;
+          text-align: center;
+          margin-bottom: 1rem;
+          background: linear-gradient(135deg, #ffffff 0%, #e0e7ff 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+          text-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .hero-title-accent {
+          background: linear-gradient(135deg, #000008 0%, #ac4103 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+        
+        .hero-subtitle {
+          font-size: 1.1rem;
+          text-align: center;
+          margin-bottom: 2rem;
+          color: rgba(255, 255, 255, 0.9);
+          font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+          .hero-title {
+            font-size: 1.8rem;
+          }
+          
+          .hero-subtitle {
+            font-size: 0.95rem;
+          }
+          
+          .search-box-responsive {
+            height: 55px !important;
+            min-height: 55px;
+          }
+        }
+      `}</style>
     </>
   )
 }
