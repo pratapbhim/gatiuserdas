@@ -131,9 +131,23 @@ export default function QuickCategories() {
                   WebkitBackdropFilter: 'blur(18px)'
                 }}
               >
+                {/* Card tag (bordered) at top-left */}
+                <div className="absolute top-3 left-3 z-20">
+                  <div 
+                    className="text-[9px] rounded-[5px] font-semibold px-3 py-1 inline-block tracking-wide border"
+                    style={{
+                      background: `linear-gradient(135deg, ${category.iconBg})`,
+                      borderColor: category.borderColor,
+                      color: '#171818',
+                      letterSpacing: '0.3px'
+                    }}
+                  >
+                    {category.tag}
+                  </div>
+                </div>
                 {/* Card image at top-right */}
                 <div className="absolute top-3 right-3 z-10">
-                  <div className="w-[72px] h-[72px] flex items-center justify-center group-hover:scale-105 transition-transform duration-300">
+                  <div className="w-[98px] h-[98px] flex items-center justify-center group-hover:scale-105 transition-transform duration-300">
                     <img
                       src={category.image}
                       alt={category.title}
@@ -141,22 +155,14 @@ export default function QuickCategories() {
                     />
                   </div>
                 </div>
-                {/* Card text at bottom-left */}
-                <div className="absolute left-3 bottom-3 z-20 text-left">
-                  <h3 className="text-[15px] font-bold mb-1 text-gray-800 leading-tight px-1 drop-shadow-sm">
+                {/* Card title (main text) lower at bottom-left */}
+                <div className="absolute left-3 bottom-5 z-20 text-left">
+                  <h3
+                    className="text-[15px] font-extrabold mb-[-5px] text-gray-800 leading-tight px-1 drop-shadow-lg mt-4 font-poppins tracking-wide"
+                    style={{letterSpacing: '0.5px'}}
+                  >
                     {category.title}
                   </h3>
-                  <div 
-                    className="text-[10px] rounded-[10px] font-semibold px-3 py-1 inline-block tracking-wide border mt-1"
-                    style={{
-                      background: `linear-gradient(135deg, ${category.iconBg})`,
-                      borderColor: category.borderColor,
-                      color: '#4B5563',
-                      letterSpacing: '0.3px'
-                    }}
-                  >
-                    {category.tag}
-                  </div>
                 </div>
                 {/* Hover glow effect */}
                 <div 
