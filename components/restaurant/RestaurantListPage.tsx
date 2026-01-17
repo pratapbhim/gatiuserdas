@@ -42,6 +42,196 @@ interface RestaurantCard {
   discount?: number
   fssaiLicense: string
   category?: string
+  is_active?: boolean
+  opening_time?: string
+  closing_time?: string
+}
+
+// Updated NotFound Component with improved layout
+const NotFound = ({ 
+  message, 
+  description, 
+  buttonText, 
+  onButtonClick 
+}: { 
+  message: string; 
+  description: string; 
+  buttonText: string; 
+  onButtonClick: () => void 
+}) => {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-4">
+      <div className="max-w-6xl w-full grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-16 items-center">
+        {/* Left side - Image with increased height */}
+        <div className="relative h-80 md:h-[500px] rounded-3xl overflow-hidden shadow-2xl">
+          <Image
+            src="/img/wrong.png" // Your public image path
+            alt="Wrong turn illustration"
+            fill
+            className="object-cover"
+            priority
+            sizes="(max-width: 768px) 100vw, 50vw"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+        </div>
+
+        {/* Right side - Content with reduced text area */}
+        <div className="text-center md:text-left space-y-6">
+          {/* "Oops" at top with smaller text size */}
+          <div>
+            <h2 className="text-4xl md:text-5xl font-black text-gray-900 mb-2">
+              Oops,
+            </h2>
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
+              {message}
+            </h1>
+          </div>
+          
+          <p className="text-gray-600 text-lg leading-relaxed">
+            {description}
+          </p>
+          
+          <div className="space-y-4 pt-4">
+            <button
+              onClick={onButtonClick}
+              className="inline-flex items-center gap-3 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-bold py-4 px-10 rounded-2xl text-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 active:translate-y-0 shadow-lg"
+            >
+              <span>{buttonText}</span>
+              <i className="fas fa-arrow-right text-xl"></i>
+            </button>
+            
+            <p className="text-gray-500 text-sm italic">
+              Let's explore other amazing restaurants in your city!
+            </p>
+          </div>
+          
+          {/* Additional decorative elements */}
+          <div className="mt-10 pt-8 border-t border-gray-200">
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center shadow-md">
+                  <i className="fas fa-store text-green-600 text-lg"></i>
+                </div>
+                <div>
+                  <span className="text-sm font-semibold text-gray-700 block">Local Stores</span>
+                  <span className="text-xs text-gray-500">Near you</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center shadow-md">
+                  <i className="fas fa-bolt text-blue-600 text-lg"></i>
+                </div>
+                <div>
+                  <span className="text-sm font-semibold text-gray-700 block">Fast Delivery</span>
+                  <span className="text-xs text-gray-500">Minutes away</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center shadow-md">
+                  <i className="fas fa-star text-purple-600 text-lg"></i>
+                </div>
+                <div>
+                  <span className="text-sm font-semibold text-gray-700 block">Top Rated</span>
+                  <span className="text-xs text-gray-500">Quality assured</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Updated 404 Page Component with new layout
+const NotFound404 = () => {
+  const router = useRouter()
+  
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-4">
+      <div className="max-w-6xl w-full grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-16 items-center">
+        {/* Left side - Image with increased height */}
+        <div className="relative h-80 md:h-[500px] rounded-3xl overflow-hidden shadow-2xl">
+          <Image
+            src="/img/wrong.png"
+            alt="Wrong turn illustration"
+            fill
+            className="object-cover"
+            priority
+            sizes="(max-width: 768px) 100vw, 50vw"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+        </div>
+
+        {/* Right side - Content with reduced text area */}
+        <div className="text-center md:text-left space-y-6">
+          <div>
+            <h2 className="text-4xl md:text-5xl font-black text-gray-900 mb-2">
+              Oops,
+            </h2>
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-2">
+              Wrong Way!
+            </h1>
+            <div className="text-8xl md:text-9xl font-black text-gray-900 opacity-10 -mt-6 -mb-4">
+              404
+            </div>
+          </div>
+          
+          <p className="text-gray-600 text-lg leading-relaxed">
+            Looks like you're off the route!
+            Let's take you back to GatiMitra—discover nearby stores and get food, parcels, or rides in minutes.
+          </p>
+          
+          <div className="space-y-4 pt-4">
+            <button
+              onClick={() => router.push('/')}
+              className="inline-flex items-center gap-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-bold py-4 px-10 rounded-2xl text-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 active:translate-y-0 shadow-lg"
+            >
+              <span>Back to GatiMitra</span>
+              <i className="fas fa-home text-xl"></i>
+            </button>
+            
+            <p className="text-gray-500 text-sm italic">
+              Discover your city & experience the joy of shopping at local stores
+            </p>
+          </div>
+          
+          {/* Additional decorative elements */}
+          <div className="mt-10 pt-8 border-t border-gray-200">
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center shadow-md">
+                  <i className="fas fa-store text-green-600 text-lg"></i>
+                </div>
+                <div>
+                  <span className="text-sm font-semibold text-gray-700 block">Local Stores</span>
+                  <span className="text-xs text-gray-500">Near you</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center shadow-md">
+                  <i className="fas fa-shipping-fast text-blue-600 text-lg"></i>
+                </div>
+                <div>
+                  <span className="text-sm font-semibold text-gray-700 block">Fast Delivery</span>
+                  <span className="text-xs text-gray-500">Minutes away</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center shadow-md">
+                  <i className="fas fa-star text-purple-600 text-lg"></i>
+                </div>
+                <div>
+                  <span className="text-sm font-semibold text-gray-700 block">Top Rated</span>
+                  <span className="text-xs text-gray-500">Quality assured</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 const RestaurantListPage = () => {
@@ -58,7 +248,6 @@ const RestaurantListPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-
   React.useEffect(() => {
     setLoading(true);
     let url = '/api/restaurants';
@@ -70,7 +259,7 @@ const RestaurantListPage = () => {
       .then(data => {
         setRestaurants(
           (data || []).map((r: any) => ({
-            id: r.restaurant_id ? r.restaurant_id.toString() : '', // Always use restaurant_id as string
+            id: r.restaurant_id ? r.restaurant_id.toString() : '',
             name: r.restaurant_name ?? '',
             cuisines: r.cuisine_type ? r.cuisine_type.split(',').map((c: string) => c.trim()) : [],
             rating: r.avg_rating ?? '',
@@ -82,6 +271,9 @@ const RestaurantListPage = () => {
             discount: r.discount ?? '',
             fssaiLicense: r.fssai_license ?? '',
             category: r.category ?? '',
+            is_active: r.is_active ?? true,
+            opening_time: r.opening_time ?? '',
+            closing_time: r.closing_time ?? '',
           }))
         );
         setLoading(false);
@@ -104,16 +296,14 @@ const RestaurantListPage = () => {
   }
 
   if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gray-100 mb-4">
-            <i className="fas fa-inbox text-4xl text-gray-400"></i>
-          </div>
-          <h3 className="text-2xl font-bold text-gray-700 mb-2">{error}</h3>
-        </div>
-      </div>
-    );
+      return (
+          <NotFound 
+            message="Looks like you're off the route!!" 
+            description="Let's take you back to GatiMitra—discover nearby stores and get food, parcels, or rides in minutes." 
+            buttonText="Push me to GatiMitra!" 
+            onButtonClick={() => window.location.href = '/order'}
+          />
+      );
   }
 
   const filteredRestaurants = restaurants.filter(r => {
@@ -402,17 +592,12 @@ const RestaurantListPage = () => {
             })}
           </div>
         ) : (
-          <div className="text-center py-16">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gray-100 mb-4">
-              <i className="fas fa-inbox text-4xl text-gray-400"></i>
-            </div>
-            <h3 className="text-2xl font-bold text-gray-700 mb-2">No restaurants found</h3>
-            <p className="text-gray-600 mb-6">Try adjusting your filters or explore other categories</p>
-            <Link href="/order" className="inline-block bg-gradient-to-r from-[#16c2a5] to-[#0fa589] text-white px-6 py-3 rounded-full font-semibold hover:shadow-lg transition-all">
-              <i className="fas fa-arrow-left mr-2"></i>
-              Back to Categories
-            </Link>
-          </div>
+          <NotFound 
+            message="Looks like you're off the route!!" 
+            description="Let's take you back to GatiMitra—discover nearby stores and get food, parcels, or rides in minutes." 
+            buttonText="Push me to GatiMitra!" 
+            onButtonClick={() => window.location.href = '/order'}
+          />
         )}
       </div>
       </div>
@@ -421,3 +606,4 @@ const RestaurantListPage = () => {
 }
 
 export default RestaurantListPage
+export { NotFound404 }
